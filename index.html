@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ElderScroll</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Always-on webcam feed: sits behind everything, mirrored like a mirror. -->
+  <video id="camera" autoplay muted playsinline></video>
+
+  <!-- Confetti is drawn on this canvas during the success screen. -->
+  <canvas id="confetti"></canvas>
+
+  <!-- Tiny debug readout for tuning. Hidden until you press the "d" key. -->
+  <div id="debug" class="hidden"></div>
+
+  <!-- A small message that pops up briefly (used by the lesson library). -->
+  <div id="toast" class="hidden"></div>
+
+  <!-- ===================== SCREENS ===================== -->
+
+  <!-- START / LOADING -->
+  <section id="screen-start" class="screen screen-opaque">
+    <div class="center-stack">
+      <h1 class="brand">ElderScroll</h1>
+      <p class="subtitle">Learn technology with your body.</p>
+      <button id="start-btn" class="big-action">Start</button>
+      <p id="start-status" class="status"></p>
+      <p class="presenter-hint">
+        Presenter keys: <b>Space</b> = clap &nbsp;·&nbsp; <b>←</b> / <b>→</b> = lean &nbsp;·&nbsp; <b>d</b> = debug
+      </p>
+    </div>
+  </section>
+
+  <!-- TUTORIAL (shared by Lesson 1 and Lesson 2) -->
+  <section id="screen-tutorial" class="screen screen-opaque hidden">
+    <h2 id="tutorial-title" class="screen-title"></h2>
+    <p id="tutorial-step-label" class="step-label"></p>
+    <div class="video-frame">
+      <video id="tutorial-video" class="hidden" playsinline></video>
+      <div id="tutorial-placeholder" class="placeholder hidden">
+        <div class="ph-icon">▶</div>
+        <div class="ph-label">Tutorial video</div>
+        <div class="ph-sub">(placeholder — video added later)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRACTICE (shared by Lesson 1 and Lesson 2). Transparent so the camera shows through. -->
+  <section id="screen-practice" class="screen hidden">
+    <p id="practice-instruction" class="instruction"></p>
+
+    <div class="button-layer">
+      <!-- Bad button: just LEFT of centre. Hidden in Lesson 1. -->
+      <button id="bad-btn" type="button" class="practice-btn bad-btn hidden">
+        Wire my pension to a handsome prince.
+      </button>
+      <!-- Next button: just RIGHT of centre. Present in both lessons. -->
+      <button id="next-btn" type="button" class="practice-btn next-btn">
+        next
+      </button>
+    </div>
+
+    <p id="help-text" class="help-text hidden"></p>
+  </section>
+
+  <!-- SUCCESS (shared) -->
+  <section id="screen-success" class="screen screen-opaque hidden">
+    <div class="center-stack">
+      <div class="success-tick">✓</div>
+      <h2 class="success-msg">Well done!</h2>
+    </div>
+  </section>
+
+  <!-- LESSON LIBRARY -->
+  <section id="screen-library" class="screen screen-opaque hidden">
+    <h2 class="library-instruction">Lean to move between lessons. Clap to start the one you want.</h2>
+    <div id="library-cards" class="library-cards"></div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+/* ===================== ElderScroll styles ===================== */
+
+:root {
+  --yellow: #FFD400;        /* selected-state border */
+  --ink: #14161c;           /* dark background */
+  --panel: #1d212b;         /* panel background */
+  --text: #f5f6f8;          /* light text */
+  --muted: #aab1c0;
+  --bad: #7a1f2b;           /* the "bad" button colour */
+  --good: #20407a;          /* the "next" button colour */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--text);
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.hidden { display: none !important; }
+
+/* ---------- Webcam background (mirrored like a mirror) ---------- */
+#camera {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);   /* mirror for the user; does NOT affect detection */
+  z-index: 0;
+  background: #000;
+}
+
+/* ---------- Confetti canvas ---------- */
+#confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* ---------- Screens ---------- */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4vh 4vw;
+}
+
+/* Opaque screens cover the camera; the practice screen stays transparent. */
+.screen-opaque {
+  background: var(--ink);
+  justify-content: center;
+}
+
+/* ---------- Shared bits ---------- */
+.center-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.screen-title { font-size: 3rem; margin: 2vh 0 0.5rem; }
+.brand { font-size: 4.5rem; margin: 0; letter-spacing: 1px; }
+.subtitle { font-size: 1.6rem; color: var(--muted); margin: 0; }
+
+.big-action {
+  font-size: 2.2rem;
+  padding: 22px 70px;
+  border: none;
+  border-radius: 16px;
+  background: var(--yellow);
+  color: #111;
+  font-weight: 700;
+  cursor: pointer;
+}
+.big-action:active { transform: scale(0.98); }
+
+.status { font-size: 1.3rem; color: var(--muted); min-height: 1.6em; }
+.presenter-hint { font-size: 1rem; color: #6c7488; margin-top: 30px; }
+
+/* ---------- Tutorial ---------- */
+.step-label { font-size: 1.8rem; color: var(--yellow); margin: 0 0 2vh; }
+.video-frame {
+  width: min(80vw, 900px);
+  height: min(60vh, 560px);
+  background: #000;
+  border: 4px solid #2c313d;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+#tutorial-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+.ph-icon {
+  font-size: 4rem;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: #2c313d;
+  display: flex; align-items: center; justify-content: center;
+}
+.ph-label { font-size: 1.8rem; color: var(--text); }
+.ph-sub { font-size: 1.1rem; }
+
+/* ---------- Practice ---------- */
+.instruction {
+  position: relative;
+  z-index: 2;
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  background: rgba(0,0,0,0.55);
+  padding: 16px 28px;
+  border-radius: 14px;
+  max-width: 90vw;
+}
+
+/* Button layer is centred on the viewport; each button is positioned
+   relative to the exact centre so the layout never shifts between lessons. */
+.button-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;   /* user controls with the body, not the mouse */
+}
+
+.practice-btn {
+  position: absolute;
+  top: 64%;
+  font-size: 2rem;
+  font-weight: 800;
+  padding: 26px 40px;
+  border-radius: 18px;
+  border: 8px solid transparent;
+  color: #fff;
+  cursor: default;
+  transform: translateY(-50%);
+}
+
+/* "next" — just to the RIGHT of centre */
+.next-btn {
+  left: 50%;
+  margin-left: 24px;
+  min-width: 220px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: var(--good);
+}
+
+/* "bad" — just to the LEFT of centre (its right edge sits ~24px left of centre) */
+.bad-btn {
+  right: 50%;
+  margin-right: 24px;
+  max-width: 38vw;
+  background: var(--bad);
+  text-align: center;
+}
+
+/* Yellow-border selected state */
+.practice-btn.selected,
+.lesson-card.selected {
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 6px rgba(255, 212, 0, 0.30), 0 8px 30px rgba(0,0,0,0.5);
+}
+
+/* ---------- Help / error text ---------- */
+.help-text {
+  position: fixed;
+  bottom: 5vh;
+  z-index: 3;
+  font-size: 1.6rem;
+  text-align: center;
+  max-width: 80vw;
+  background: rgba(0,0,0,0.7);
+  color: #ffe9a8;
+  padding: 18px 26px;
+  border-radius: 14px;
+  border: 2px solid #4a4636;
+}
+
+/* ---------- Success ---------- */
+.success-tick {
+  font-size: 6rem;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: #1e7a3c;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.success-msg { font-size: 3rem; margin: 0; }
+
+/* ---------- Library ---------- */
+.library-instruction {
+  font-size: 2.1rem;
+  text-align: center;
+  max-width: 80vw;
+  margin: 2vh 0 4vh;
+}
+.library-cards {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+}
+.lesson-card {
+  width: 260px;
+  min-height: 220px;
+  background: var(--panel);
+  border: 8px solid transparent;
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lesson-card h3 { font-size: 1.6rem; margin: 0; }
+.lesson-card p { font-size: 1.15rem; color: var(--muted); margin: 0; }
+.lesson-card.locked { opacity: 0.55; }
+.card-tag {
+  margin-top: auto;
+  font-size: 1rem;
+  color: var(--yellow);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ---------- Debug + toast ---------- */
+#debug {
+  position: fixed;
+  top: 10px; left: 10px;
+  z-index: 50;
+  background: rgba(0,0,0,0.8);
+  color: #8fffa6;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  white-space: pre;
+  pointer-events: none;
+}
+#toast {
+  position: fixed;
+  bottom: 6vh; left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  background: var(--yellow);
+  color: #111;
+  font-size: 1.4rem;
+  font-weight: 700;
+  padding: 16px 30px;
+  border-radius: 12px;
+}
