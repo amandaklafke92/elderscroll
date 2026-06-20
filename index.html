@@ -4,7 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ElderScroll</title>
-  <link rel="stylesheet" href="style.css" />
+  <!-- Pixel fonts: Press Start 2P for labels/headings, VT323 for readable body text -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <!-- Shared layout skeleton first, then the persona skin paints on top. -->
+  <link rel="stylesheet" href="base.css" />
+  <link rel="stylesheet" href="personas/elders/theme.css" />
 </head>
 <body>
 
@@ -81,6 +87,9 @@
     <div id="library-cards" class="library-cards"></div>
   </section>
 
+  <!-- Persona config + content load first, then the shared engine reads them. -->
+  <script src="personas/elders/config.js"></script>
+  <script src="personas/elders/content.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

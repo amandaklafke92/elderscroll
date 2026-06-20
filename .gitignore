@@ -10,3 +10,10 @@
 
 # Logs / scratch
 *.log
+
+# Large local-only media (share via Drive/Dropbox, not git)
+*.mp4
+*.MP4
+
+# Local scratch notes (not part of the product)
+backlog.md

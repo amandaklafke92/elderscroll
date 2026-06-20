@@ -1,0 +1,228 @@
+/* =====================================================================
+   theme.css — PERSONA SKIN (Elders, "ElderScroll")
+
+   The entire visual identity: colour + font design tokens, borders,
+   shadows, font sizes, decorative backgrounds. Loads AFTER base.css and
+   paints the look on top of the shared layout skeleton.
+
+   This file is yours to change freely. To make a new persona, copy this
+   file (plus config.js + content.js) into personas/<your-persona>/ and
+   restyle. You should not need to touch base.css or app.js.
+
+   NOTE: this theme also chooses the web fonts ('Press Start 2P', 'VT323'),
+   which are loaded via a <link> in index.html. A persona using different
+   fonts updates BOTH the --font-* tokens below and that <link>.
+   ===================================================================== */
+
+:root {
+  --bg:        #e6e7ea;        /* light grey background */
+  --panel:     #ffffff;        /* white pixel panels */
+  --black:     #16181d;        /* outlines + text */
+  --text:      #16181d;
+  --muted:     #5a6172;
+  --blue:      #1f9cff;        /* "next" button + primary accent */
+  --blue-dark: #0b6fc2;
+  --red:       #ef4d4d;        /* "bad" button + coral accent */
+  --red-dark:  #b9302f;
+  --green:     #2faa4f;        /* success */
+  --yellow:    #ffd400;        /* SELECTED state border (required by PRD) */
+
+  --font-display: 'Press Start 2P', 'Courier New', monospace;  /* short labels/headings */
+  --font-body:    'VT323', 'Courier New', monospace;           /* readable body text */
+}
+
+body {
+  color: var(--text);
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  /* faint graph-paper grid for a pixel feel */
+  background-image:
+    linear-gradient(rgba(0,0,0,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Reusable "pixel box" look = thick black border + hard (blur-free) shadow */
+.pixel-shadow { box-shadow: 6px 6px 0 var(--black); }
+
+.screen-opaque {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.center-stack { text-align: center; }
+
+/* ---------- Headings / start screen ---------- */
+.screen-title {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  line-height: 1.4;
+  margin: 2vh 0 0.5rem;
+  color: var(--black);
+}
+.brand {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  margin: 0;
+  color: var(--black);
+  text-shadow: 5px 5px 0 var(--blue);   /* arcade-style hard offset shadow */
+}
+.subtitle { font-size: 2rem; color: var(--muted); margin: 0; }
+
+.big-action {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  padding: 22px 48px;
+  border: 4px solid var(--black);
+  border-radius: 0;
+  background: var(--blue);
+  color: #fff;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 6px 6px 0 var(--black);
+}
+.big-action:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 var(--black); }
+
+.status { font-size: 1.6rem; color: var(--muted); min-height: 1.6em; }
+.presenter-hint { font-size: 1.4rem; color: var(--muted); margin-top: 26px; }
+
+/* ---------- Tutorial ---------- */
+.step-label {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--blue-dark);
+  margin: 0 0 2vh;
+}
+.video-frame {
+  background: #000;
+  border: 4px solid var(--black);
+  border-radius: 0;
+  box-shadow: 8px 8px 0 var(--black);
+}
+.placeholder { color: var(--muted); background: var(--panel); }
+.ph-icon {
+  font-size: 3rem;
+  border-radius: 0;
+  background: var(--blue);
+  color: #fff;
+  border: 4px solid var(--black);
+}
+.ph-label { font-family: var(--font-display); font-size: 1rem; color: var(--black); text-align: center; }
+.ph-sub { font-size: 1.4rem; }
+
+/* ---------- Practice ---------- */
+.instruction {
+  font-family: var(--font-body);
+  font-size: 2.2rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--black);
+  background: var(--panel);
+  border: 4px solid var(--black);
+  box-shadow: 6px 6px 0 var(--black);
+  padding: 14px 26px;
+}
+.practice-btn {
+  font-family: var(--font-display);
+  padding: 22px 30px;
+  border-radius: 0;
+  border: 4px solid var(--black);
+  color: #fff;
+  cursor: default;
+  box-shadow: 6px 6px 0 var(--black);
+  line-height: 1.5;
+}
+.next-btn {
+  font-size: 1.8rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  background: var(--blue);
+}
+.bad-btn {
+  font-size: 0.85rem;     /* long label, so a smaller pixel size keeps it tidy */
+  background: var(--red);
+  text-align: center;
+}
+/* Yellow-border SELECTED state (keeps the hard shadow) */
+.practice-btn.selected,
+.lesson-card.selected {
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 4px rgba(255, 212, 0, 0.45), 6px 6px 0 var(--black);
+}
+
+/* ---------- Help / error text ---------- */
+.help-text {
+  font-family: var(--font-body);
+  font-size: 2rem;
+  line-height: 1.15;
+  text-align: center;
+  background: var(--yellow);
+  color: var(--black);
+  padding: 16px 24px;
+  border: 4px solid var(--black);
+  box-shadow: 6px 6px 0 var(--black);
+}
+
+/* ---------- Success ---------- */
+.success-tick {
+  font-family: var(--font-display);
+  font-size: 3.4rem;
+  border-radius: 0;
+  background: var(--green);
+  color: #fff;
+  border: 5px solid var(--black);
+  box-shadow: 8px 8px 0 var(--black);
+}
+.success-msg {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  margin: 0;
+  color: var(--black);
+}
+
+/* ---------- Library ---------- */
+.library-instruction {
+  font-family: var(--font-body);
+  font-size: 2.4rem;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--black);
+}
+.lesson-card {
+  background: var(--panel);
+  border: 4px solid var(--black);
+  border-radius: 0;
+  box-shadow: 6px 6px 0 var(--black);
+}
+.lesson-card h3 { font-family: var(--font-display); font-size: 1rem; line-height: 1.5; margin: 0; color: var(--black); }
+.lesson-card p { font-size: 1.5rem; line-height: 1.05; color: var(--muted); margin: 0; }
+.lesson-card.locked { opacity: 0.55; }
+.card-tag {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  color: var(--blue-dark);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ---------- Debug + toast ---------- */
+#debug {
+  background: var(--black);
+  color: #8fffa6;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 0;
+}
+#toast {
+  background: var(--yellow);
+  color: var(--black);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  padding: 16px 26px;
+  border: 4px solid var(--black);
+  box-shadow: 6px 6px 0 var(--black);
+}

@@ -3,20 +3,19 @@
    Pure static app: HTML + CSS + this file. MediaPipe loaded from a CDN.
    ===================================================================== */
 
-/* ---------- Tunable constants (safe to adjust for your setup) ---------- */
-const CLAP_APART     = 0.9;   // wrists must first separate to ~shoulder width
-const CLAP_TOGETHER  = 0.45;  // ...then come closer than this (× shoulder width) = clap
-const CLAP_COOLDOWN  = 1200;  // ms between claps, stops one clap firing twice
+/* ---------- Tunable constants — sourced from the persona's config.js ---------- */
+const CLAP_APART      = CONFIG.clapApart;
+const CLAP_TOGETHER   = CONFIG.clapTogether;
+const CLAP_COOLDOWN   = CONFIG.clapCooldown;
 
-const LEAN_ENTER     = 0.45;  // shoulder-centre shift (× shoulder width) to count as a lean
-const LEAN_EXIT      = 0.20;  // must return inside this before another lean can fire
-const LEAN_RIGHT_SIGN = -1;   // raw camera frames: user's RIGHT = shoulder-centre x DECREASES.
-                              //   If lean reads reversed on your machine, change -1 to 1.
+const LEAN_ENTER      = CONFIG.leanEnter;
+const LEAN_EXIT       = CONFIG.leanExit;
+const LEAN_RIGHT_SIGN = CONFIG.leanRightSign;
 
-const PLACEHOLDER_MS = 4000;  // how long a missing-video placeholder shows before auto-advancing
-const MAX_STEP_MS    = 30000; // safety cap per tutorial step (videos are < 30s)
-const CONFETTI_MS    = 3000;  // success-screen confetti duration
-const HELP_DELAY_MS  = 12000; // show "it's not working..." after this long with no success
+const PLACEHOLDER_MS  = CONFIG.placeholderMs;
+const MAX_STEP_MS     = CONFIG.maxStepMs;
+const CONFETTI_MS     = CONFIG.confettiMs;
+const HELP_DELAY_MS   = CONFIG.helpDelayMs;
 
 /* ---------- MediaPipe CDN locations (verified reachable) ---------- */
 const MP_BUNDLE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
@@ -192,15 +191,15 @@ function goState(state) {
    4. TUTORIAL — two video slots, placeholders if assets are missing
    ===================================================================== */
 function runTutorial(lesson, onDone) {
+  const labels = CONTENT.tutorials[lesson].steps;
   const steps = [
-    { src: `assets/tutorials/lesson${lesson}-finger.mp4`, label: 'Step 1 — On a phone' },
-    { src: `assets/tutorials/lesson${lesson}-body.mp4`,   label: 'Step 2 — With your body' },
+    { src: `assets/tutorials/lesson${lesson}-finger.mp4`, label: labels[0] },
+    { src: `assets/tutorials/lesson${lesson}-body.mp4`,   label: labels[1] },
   ];
   const vid   = el('#tutorial-video');
   const ph    = el('#tutorial-placeholder');
   const lbl   = el('#tutorial-step-label');
-  el('#tutorial-title').textContent =
-    lesson === 1 ? 'Lesson 1 — Clap to Click' : 'Lesson 2 — Lean to Choose';
+  el('#tutorial-title').textContent = CONTENT.tutorials[lesson].title;
 
   let i = 0;
   function playStep() {
@@ -252,12 +251,11 @@ function setupPractice(lesson) {
   if (lesson === 1) {
     badBtn.classList.add('hidden');
     select('next');                              // "next" is pre-selected
-    el('#practice-instruction').textContent = 'Clap your hands to press NEXT.';
+    el('#practice-instruction').textContent = CONTENT.practice[1];
   } else {
     badBtn.classList.remove('hidden');
     select('bad');                               // "bad" button is pre-selected
-    el('#practice-instruction').textContent =
-      'Lean to your right to choose NEXT, then clap to press it.';
+    el('#practice-instruction').textContent = CONTENT.practice[2];
   }
 
   helpTimer = setTimeout(showHelp, HELP_DELAY_MS);
@@ -292,9 +290,7 @@ function succeed(lesson) {
 
 function showHelp() {
   const h = el('#help-text');
-  h.textContent =
-    "it's not working... try this... Sit so your head and shoulders fill the camera, " +
-    "then make your movement bigger and hold still for a moment afterwards.";
+  h.textContent = CONTENT.helpText;
   h.classList.remove('hidden');
 }
 
@@ -309,7 +305,7 @@ function sizeConfetti() {
   confettiCtx = c.getContext('2d');
 }
 function runConfetti(onDone) {
-  const colors = ['#FFD400', '#ff5d8f', '#4ad6ff', '#7cff9b', '#c79bff', '#ffffff'];
+  const colors = ['#1f9cff', '#ef4d4d', '#ffd400', '#2faa4f', '#16181d', '#c14dff'];
   confettiParticles = Array.from({ length: 160 }, () => ({
     x: Math.random() * window.innerWidth,
     y: -20 - Math.random() * window.innerHeight,
@@ -347,12 +343,7 @@ function runConfetti(onDone) {
 /* =====================================================================
    7. LESSON LIBRARY — appears only after both onboarding lessons
    ===================================================================== */
-const LESSONS = [
-  { title: 'Clap to Click',  desc: 'Clap your hands to press a button.',     state: 'lesson1-tutorial', unlocked: true },
-  { title: 'Lean to Choose', desc: 'Lean to move between buttons, clap to pick.', state: 'lesson2-tutorial', unlocked: true },
-  { title: 'Raise Hands to Scroll Up', desc: 'Lift both hands to scroll up.', unlocked: false },
-  { title: 'Lean Forward to Scroll', desc: 'Lean in to scroll down a page.',  unlocked: false },
-];
+const LESSONS = CONTENT.lessons;
 let libraryIndex = 0;
 
 function setupLibrary() {
@@ -389,7 +380,7 @@ function handleLibrary(gesture) {
       activeGestureHandler = null;
       goState(lesson.state);                 // re-run that lesson
     } else {
-      toast('Coming soon — in a later release.');
+      toast(CONTENT.comingSoonToast);
     }
   }
 }
