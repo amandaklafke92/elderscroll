@@ -126,26 +126,25 @@ html, body {
   justify-content: center;
 }
 
-/* ---------- Library ---------- */
-.library-instruction { max-width: 80vw; margin: 3vh 0 4vh; }
-.library-cards {
+/* ---------- Get-ready countdown (size is structural) ---------- */
+.getready-count {
+  width: 150px;
+  height: 150px;
   display: flex;
-  gap: 32px;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  align-items: stretch;
 }
-.lesson-card {
-  width: 250px;
-  min-height: 210px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 22px;
-}
-.card-tag { margin-top: auto; }
 
-/* ---------- Debug + toast ---------- */
+/* ---------- Failure cue (size is structural) ---------- */
+.failure-cue {
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Debug ---------- */
 #debug {
   position: fixed;
   top: 10px;
@@ -153,11 +152,4 @@ html, body {
   z-index: 50;
   white-space: pre;
   pointer-events: none;
-}
-#toast {
-  position: fixed;
-  bottom: 6vh;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 40;
 }

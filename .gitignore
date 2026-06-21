@@ -17,3 +17,6 @@
 
 # Local scratch notes (not part of the product)
 backlog.md
+
+# Local Claude Code state
+.claude/

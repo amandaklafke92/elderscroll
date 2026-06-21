@@ -23,9 +23,6 @@
   <!-- Tiny debug readout for tuning. Hidden until you press the "d" key. -->
   <div id="debug" class="hidden"></div>
 
-  <!-- A small message that pops up briefly (used by the lesson library). -->
-  <div id="toast" class="hidden"></div>
-
   <!-- ===================== SCREENS ===================== -->
 
   <!-- START / LOADING -->
@@ -36,56 +33,57 @@
       <button id="start-btn" class="big-action">Start</button>
       <p id="start-status" class="status"></p>
       <p class="presenter-hint">
-        Presenter keys: <b>Space</b> = clap &nbsp;·&nbsp; <b>←</b> / <b>→</b> = lean &nbsp;·&nbsp; <b>d</b> = debug
+        Presenter keys: <b>Space</b> = perform gesture &nbsp;·&nbsp; <b>d</b> = debug
       </p>
     </div>
   </section>
 
-  <!-- INTRO (shared; content set per lesson) — explains the lesson, text only -->
+  <!-- INTRO video (plays once after Start) -->
   <section id="screen-intro" class="screen screen-opaque hidden">
-    <div class="center-stack">
-      <p  id="intro-eyebrow"  class="intro-eyebrow"></p>
-      <h1 id="intro-equation" class="intro-equation"></h1>
-      <p  id="intro-line"     class="intro-line"></p>
+    <div class="video-frame">
+      <video id="intro-video" class="hidden" playsinline></video>
+      <div id="intro-placeholder" class="placeholder hidden">
+        <div class="ph-icon">▶</div>
+        <div class="ph-label">Intro</div>
+        <div class="ph-sub">(placeholder — video missing)</div>
+      </div>
     </div>
   </section>
 
-  <!-- COUNTDOWN (shared) — 3 · 2 · 1 before the video -->
-  <section id="screen-countdown" class="screen screen-opaque hidden">
-    <div id="countdown-number" class="countdown-number"></div>
-  </section>
-
-  <!-- TUTORIAL VIDEO (shared) — one video per lesson, nothing else on screen -->
+  <!-- TUTORIAL (one video per lesson) -->
   <section id="screen-tutorial" class="screen screen-opaque hidden">
+    <h2 id="tutorial-title" class="screen-title"></h2>
+    <p id="tutorial-step-label" class="step-label"></p>
     <div class="video-frame">
       <video id="tutorial-video" class="hidden" playsinline></video>
       <div id="tutorial-placeholder" class="placeholder hidden">
         <div class="ph-icon">▶</div>
         <div class="ph-label">Tutorial video</div>
-        <div class="ph-sub">(coming soon)</div>
+        <div class="ph-sub">(placeholder — video missing)</div>
       </div>
     </div>
   </section>
 
-  <!-- YOUR TURN (shared; content set per lesson) — primes the practice action -->
-  <section id="screen-ready" class="screen screen-opaque hidden">
+  <!-- GET READY (3s countdown before Practice 2; doubles as the
+       lead-in window for the silent recording) -->
+  <section id="screen-getready" class="screen screen-opaque hidden">
     <div class="center-stack">
-      <h1 id="ready-title" class="ready-title"></h1>
-      <p  id="ready-line"  class="ready-line"></p>
+      <h2 id="getready-text" class="screen-title"></h2>
+      <div id="getready-count" class="getready-count"></div>
     </div>
   </section>
 
-  <!-- PRACTICE (shared by Lesson 1 and Lesson 2). Transparent so the camera shows through. -->
+  <!-- PRACTICE (shared by Practice 1 and Practice 2). Transparent so the camera shows through. -->
   <section id="screen-practice" class="screen hidden">
     <p id="practice-instruction" class="instruction"></p>
 
     <div class="button-layer">
-      <!-- Bad button: just LEFT of centre. Hidden in Lesson 1. -->
+      <!-- Legacy bad button: structurally retained but kept hidden in the new flow. -->
       <button id="bad-btn" type="button" class="practice-btn bad-btn hidden">
         Wire my pension to a handsome prince.
       </button>
-      <!-- Next button: just RIGHT of centre. Present in both lessons. -->
-      <button id="next-btn" type="button" class="practice-btn next-btn">
+      <!-- Next button: shown only on the Click lesson (lesson.showNextButton). -->
+      <button id="next-btn" type="button" class="practice-btn next-btn hidden">
         next
       </button>
     </div>
@@ -93,18 +91,20 @@
     <p id="help-text" class="help-text hidden"></p>
   </section>
 
-  <!-- SUCCESS (shared) -->
-  <section id="screen-success" class="screen screen-opaque hidden">
+  <!-- FAILURE feedback. Visual signal cue = the screen's red border + warning icon. -->
+  <section id="screen-failure" class="screen screen-opaque hidden">
     <div class="center-stack">
-      <div class="success-tick">✓</div>
-      <h2 class="success-msg">Well done!</h2>
+      <div id="failure-cue" class="failure-cue">!</div>
+      <h2 id="failure-text" class="screen-title"></h2>
     </div>
   </section>
 
-  <!-- LESSON LIBRARY -->
-  <section id="screen-library" class="screen screen-opaque hidden">
-    <h2 class="library-instruction">Lean to move between lessons. Clap to start the one you want.</h2>
-    <div id="library-cards" class="library-cards"></div>
+  <!-- SUCCESS (shared, with confetti) -->
+  <section id="screen-success" class="screen screen-opaque hidden">
+    <div class="center-stack">
+      <div class="success-tick">✓</div>
+      <h2 id="success-msg" class="success-msg">Well done!</h2>
+    </div>
   </section>
 
   <!-- Persona config + content load first, then the shared engine reads them. -->

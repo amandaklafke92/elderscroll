@@ -1,27 +1,41 @@
 /* =====================================================================
    ElderScroll — gesture-driven onboarding flow
    Pure static app: HTML + CSS + this file. MediaPipe loaded from a CDN.
+
+   Lessons are sequential: intro video → for each lesson in
+   CONTENT.lessons → tutorial → practice 1 → get-ready (3s) →
+   practice 2 (silently recorded) → success → next lesson.  The lesson
+   list and the gesture each lesson expects live in personas/<persona>/
+   content.js; this engine reads from `CONTENT` and `CONFIG` globals.
    ===================================================================== */
 
 /* ---------- Tunable constants — sourced from the persona's config.js ---------- */
-const CLAP_APART      = CONFIG.clapApart;
-const CLAP_TOGETHER   = CONFIG.clapTogether;
-const CLAP_COOLDOWN   = CONFIG.clapCooldown;
+const CLAP_APART       = CONFIG.clapApart;
+const CLAP_TOGETHER    = CONFIG.clapTogether;
+const CLAP_COOLDOWN    = CONFIG.clapCooldown;
 
-const LEAN_ENTER      = CONFIG.leanEnter;
-const LEAN_EXIT       = CONFIG.leanExit;
-const LEAN_RIGHT_SIGN = CONFIG.leanRightSign;
+const LEAN_ENTER       = CONFIG.leanEnter;
+const LEAN_EXIT        = CONFIG.leanExit;
+const LEAN_RIGHT_SIGN  = CONFIG.leanRightSign;
+
+const CROSS_TAP_DIST   = CONFIG.crossTapDist;
+const PUSH_FORWARD_Z   = CONFIG.pushForwardZ;
+const REACH_UP_MARGIN  = CONFIG.reachUpMargin;
+const OPEN_NEAR        = CONFIG.openOutNearRatio;
+const OPEN_FAR         = CONFIG.openOutFarRatio;
+const ROTATE_RATIO     = CONFIG.rotateRatio;
+const GESTURE_COOLDOWN = CONFIG.gestureCooldown;
+const GESTURE_HOLD     = CONFIG.gestureHoldFrames ?? 1;
+const CROSS_TAP_HOLD   = CONFIG.crossTapHoldFrames ?? GESTURE_HOLD;
 
 const PLACEHOLDER_MS   = CONFIG.placeholderMs;
 const MAX_STEP_MS      = CONFIG.maxStepMs;
 const CONFETTI_MS      = CONFIG.confettiMs;
 const HELP_DELAY_MS    = CONFIG.helpDelayMs;
-
-/* Teach-sequence pacing */
-const INTRO_MS          = CONFIG.introMs;
-const COUNTDOWN_FROM    = CONFIG.countdownFrom;
-const COUNTDOWN_STEP_MS = CONFIG.countdownStepMs;
-const READY_MS          = CONFIG.readyMs;
+const FAILURE_MS       = CONFIG.failureMs;
+const FAILURE_SHOW_MS  = CONFIG.failureShowMs;
+const GET_READY_MS     = CONFIG.getReadyMs;
+const POST_CAPTURE_MS  = CONFIG.postCaptureMs;
 
 /* ---------- MediaPipe CDN locations (verified reachable) ---------- */
 const MP_BUNDLE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
@@ -35,9 +49,14 @@ const el = (sel) => document.querySelector(sel);
 let poseLandmarker = null;
 let camera = null;
 let lastVideoTime = -1;
-let activeGestureHandler = null;   // set by practice + library screens; null elsewhere
-let currentSelection = 'next';     // which button currently has the yellow border
+let activeGestureHandler = null;   // set by practice screens; null elsewhere
+let activeExpectedGesture = null;  // gestureKey expected on the current practice screen
+let currentSelection = 'next';
 let helpTimer = null;
+let failureTimer = null;
+
+let lessonIdx = 0;
+let currentLesson = null;
 
 /* =====================================================================
    1. STARTUP — camera + MediaPipe, triggered by the Start button
@@ -70,7 +89,7 @@ async function start() {
     });
 
     requestAnimationFrame(detectLoop);
-    goState('lesson1-tutorial');
+    goState('intro');
   } catch (err) {
     console.error(err);
     status.textContent = 'Could not start: ' + err.message +
@@ -80,7 +99,7 @@ async function start() {
 }
 
 /* =====================================================================
-   2. DETECTION LOOP — runs every frame once the model is ready
+   2. DETECTION LOOP + GESTURE DETECTORS
    ===================================================================== */
 function detectLoop() {
   if (poseLandmarker && camera.readyState >= 2 && camera.currentTime !== lastVideoTime) {
@@ -93,21 +112,24 @@ function detectLoop() {
   requestAnimationFrame(detectLoop);
 }
 
-/* ---------- Gesture detectors (our own code on top of the landmarks) ---------- */
-// MediaPipe pose landmark indices we use:
-//   11 left shoulder · 12 right shoulder · 15 left wrist · 16 right wrist
+/* MediaPipe pose landmark indices we use:
+     0  nose
+     11 left shoulder · 12 right shoulder
+     15 left wrist · 16 right wrist
+   "Left"/"right" are the person's anatomical sides. */
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const visible = (p) => p && (p.visibility === undefined || p.visibility > 0.5);
 
+/* --- Legacy detectors (clap + lean) kept for compatibility -------- */
 let handsApart = false;
 let lastClapTime = 0;
 function detectClap(lm) {
   const lw = lm[15], rw = lm[16], ls = lm[11], rs = lm[12];
   if (!visible(lw) || !visible(rw) || !visible(ls) || !visible(rs)) return false;
   const shoulderWidth = dist(ls, rs) || 0.2;
-  const ratio = dist(lw, rw) / shoulderWidth;      // wrist gap, scaled to body size
-  if (ratio > CLAP_APART) handsApart = true;        // hands have separated
-  if (handsApart && ratio < CLAP_TOGETHER) {        // ...and come back together
+  const ratio = dist(lw, rw) / shoulderWidth;
+  if (ratio > CLAP_APART) handsApart = true;
+  if (handsApart && ratio < CLAP_TOGETHER) {
     const now = performance.now();
     if (now - lastClapTime > CLAP_COOLDOWN) {
       lastClapTime = now;
@@ -119,40 +141,147 @@ function detectClap(lm) {
 }
 
 let baselineX = null;
-let leanState = 'center';   // hysteresis so one lean fires once
+let leanState = 'center';
 function detectLean(lm) {
   const ls = lm[11], rs = lm[12];
   if (!visible(ls) || !visible(rs)) return null;
   const cx = (ls.x + rs.x) / 2;
   const shoulderWidth = Math.abs(ls.x - rs.x) || 0.2;
   if (baselineX === null) { baselineX = cx; return null; }
-
-  const offset = (cx - baselineX) / shoulderWidth;  // sideways shift, scaled to body size
+  const offset = (cx - baselineX) / shoulderWidth;
   let dir = null;
   if (offset * LEAN_RIGHT_SIGN > LEAN_ENTER) dir = 'right';
   else if (offset * LEAN_RIGHT_SIGN < -LEAN_ENTER) dir = 'left';
-
   if (dir && leanState === 'center') { leanState = dir; return dir; }
   if (!dir && Math.abs(offset) < LEAN_EXIT) {
     leanState = 'center';
-    baselineX = baselineX * 0.95 + cx * 0.05;        // slowly re-centre when upright
+    baselineX = baselineX * 0.95 + cx * 0.05;
   }
   return null;
 }
 
+/* --- Helper: gesture must hold its "fire" condition for GESTURE_HOLD
+   consecutive frames, AND the cooldown since the last fire must have
+   passed.  This kills brief incidental motions while still feeling
+   responsive once the user commits to a pose. */
+function holdGate(state, condition, holdFrames = GESTURE_HOLD) {
+  if (!condition) { state.frames = 0; return false; }
+  state.frames++;
+  if (state.frames < holdFrames) return false;
+  const now = performance.now();
+  if (now - state.last < GESTURE_COOLDOWN) return false;
+  state.last = now;
+  state.frames = 0;
+  return true;
+}
+
+/* --- Click = cross-body tap. Either wrist meeting the OPPOSITE
+   shoulder within crossTapDist × shoulder-width counts.  We score each
+   arm independently so a hidden / occluded non-tapping arm doesn't
+   block detection of the tapping one. */
+const crossTapState = { frames: 0, last: 0 };
+let lastCrossTapDist = Infinity;
+function detectCrossTap(lm) {
+  const ls = lm[11], rs = lm[12], lw = lm[15], rw = lm[16];
+  if (!visible(ls) || !visible(rs)) return false;
+  const shoulderWidth = dist(ls, rs) || 0.2;
+  let best = Infinity;
+  // Right hand → left shoulder
+  if (visible(rw)) best = Math.min(best, dist(rw, ls) / shoulderWidth);
+  // Left hand → right shoulder
+  if (visible(lw)) best = Math.min(best, dist(lw, rs) / shoulderWidth);
+  lastCrossTapDist = best;
+  return holdGate(crossTapState, best < CROSS_TAP_DIST, CROSS_TAP_HOLD);
+}
+
+/* --- Move = bilateral push forward. Uses MediaPipe pose z (negative =
+   closer to camera) for both wrists, plus a sanity check that the
+   arms are at roughly shoulder height. */
+const pushForwardState = { frames: 0, last: 0 };
+function detectPushForward(lm) {
+  const ls = lm[11], rs = lm[12], lw = lm[15], rw = lm[16];
+  if (!visible(ls) || !visible(rs) || !visible(lw) || !visible(rw)) return false;
+  if (typeof lw.z !== 'number' || typeof rw.z !== 'number') return false;
+  const wristsForward = lw.z < PUSH_FORWARD_Z && rw.z < PUSH_FORWARD_Z;
+  const wristsAtShoulderY =
+    Math.abs(lw.y - ls.y) < 0.22 && Math.abs(rw.y - rs.y) < 0.22;
+  return holdGate(pushForwardState, wristsForward && wristsAtShoulderY);
+}
+
+/* --- Zoom In = one arm extended overhead. Wrist above nose by margin. */
+const reachUpState = { frames: 0, last: 0 };
+function detectReachUp(lm) {
+  const nose = lm[0], lw = lm[15], rw = lm[16];
+  if (!visible(nose) || !(visible(lw) || visible(rw))) return false;
+  const above =
+    (visible(lw) && lw.y < nose.y - REACH_UP_MARGIN) ||
+    (visible(rw) && rw.y < nose.y - REACH_UP_MARGIN);
+  return holdGate(reachUpState, above);
+}
+
+/* --- Zoom Out = wrists transition from near each other at chest
+   level to wide open. Mirrors the clap detector's "must arm first"
+   pattern, just in reverse — and the "fire" condition still has to
+   hold for a few frames, so a quick stretch on the way past doesn't
+   trip it. */
+let openHandsNear = false;
+const openOutState = { frames: 0, last: 0 };
+function detectOpenOut(lm) {
+  const ls = lm[11], rs = lm[12], lw = lm[15], rw = lm[16];
+  if (!visible(ls) || !visible(rs) || !visible(lw) || !visible(rw)) return false;
+  const sw = dist(ls, rs) || 0.2;
+  const gap = dist(lw, rw) / sw;
+  const wristsAroundChest =
+    Math.abs((lw.y + rw.y) / 2 - (ls.y + rs.y) / 2) < 0.30;
+  if (gap < OPEN_NEAR && wristsAroundChest) openHandsNear = true;
+  const fire = openHandsNear && gap > OPEN_FAR;
+  const triggered = holdGate(openOutState, fire);
+  if (triggered) openHandsNear = false;
+  return triggered;
+}
+
+/* --- Take a Photo = torso rotation. Shoulder width foreshortens when
+   the user rotates around the vertical axis. We keep a rolling
+   "facing-forward" baseline (max-tracking) and trigger when the
+   current shoulder width falls below ROTATE_RATIO of it. */
+let baselineShoulderW = null;
+const rotateState = { frames: 0, last: 0 };
+function detectRotate(lm) {
+  const ls = lm[11], rs = lm[12];
+  if (!visible(ls) || !visible(rs)) return false;
+  const sw = dist(ls, rs) || 0.2;
+  if (baselineShoulderW === null) { baselineShoulderW = sw; return false; }
+  if (sw > baselineShoulderW) baselineShoulderW = baselineShoulderW * 0.85 + sw * 0.15;
+  const ratio = sw / baselineShoulderW;
+  return holdGate(rotateState, ratio < ROTATE_RATIO);
+}
+
+let lastFires = {};
 function processGestures(lm) {
-  const clap = detectClap(lm);
-  const lean = detectLean(lm);   // 'left' | 'right' | null
+  const clap        = detectClap(lm);
+  const lean        = detectLean(lm);
+  const crossTap    = detectCrossTap(lm);
+  const pushForward = detectPushForward(lm);
+  const reachUp     = detectReachUp(lm);
+  const openOut     = detectOpenOut(lm);
+  const rotate      = detectRotate(lm);
+  lastFires = { clap, lean, crossTap, pushForward, reachUp, openOut, rotate };
+
   if (activeGestureHandler) {
-    if (clap) activeGestureHandler('clap');
+    if (clap)            activeGestureHandler('clap');
     if (lean === 'right') activeGestureHandler('leanRight');
     else if (lean === 'left') activeGestureHandler('leanLeft');
+    if (crossTap)    activeGestureHandler('crossTap');
+    if (pushForward) activeGestureHandler('pushForward');
+    if (reachUp)     activeGestureHandler('reachUp');
+    if (openOut)     activeGestureHandler('openOut');
+    if (rotate)      activeGestureHandler('rotate');
   }
-  updateDebug(lm, clap, lean);
+  updateDebug(lm);
 }
 
 /* =====================================================================
-   3. STATE MACHINE — the exact onboarding flow
+   3. STATE MACHINE — sequential lesson progression
    ===================================================================== */
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
@@ -160,94 +289,172 @@ function showScreen(name) {
 }
 
 function goState(state) {
-  activeGestureHandler = null;          // ignore gestures unless a screen opts in
-  clearTeachTimers();                   // cancel any pending teach-screen timers
+  activeGestureHandler = null;
+  activeExpectedGesture = null;
+  clearTimeout(helpTimer);
+  clearTimeout(failureTimer);
+
   switch (state) {
-    case 'lesson1-tutorial': teachLesson(1, () => goState('lesson1-practice')); break;
-    case 'lesson1-practice': showScreen('practice'); setupPractice(1); break;
-    case 'lesson1-success':  showScreen('success'); runConfetti(() => goState('lesson2-tutorial')); break;
-    case 'lesson2-tutorial': teachLesson(2, () => goState('lesson2-practice')); break;
-    case 'lesson2-practice': showScreen('practice'); setupPractice(2); break;
-    case 'lesson2-success':  showScreen('success'); runConfetti(() => goState('library')); break;  // onboarding done -> library
-    case 'library':          showScreen('library'); setupLibrary(); break;
+    case 'intro':
+      showScreen('intro');
+      runIntro(() => startLesson(0));
+      break;
+    case 'lesson-tutorial':
+      currentLesson = CONTENT.lessons[lessonIdx];
+      showScreen('tutorial');
+      runTutorial(currentLesson, () => goState('lesson-countdown-p1'));
+      break;
+    case 'lesson-countdown-p1':
+      // Plain countdown before "Your first turn" — no recording yet.
+      showScreen('getready');
+      runCountdown(/* withRecording */ false, () => goState('lesson-practice1'));
+      break;
+    case 'lesson-practice1':
+      showScreen('practice');
+      setupPractice(currentLesson, /* turn */ 1,
+        () => goState('lesson-p1-success'),
+        () => goState('lesson-p1-failure'));
+      break;
+    case 'lesson-p1-success':
+      // Confetti is the visible reward AND the silent 3s recording lead-in
+      // for Practice 2.  Recording starts here so the clip includes the
+      // 3 seconds BEFORE "Your second turn" appears.
+      el('#success-msg').textContent = CONTENT.p1SuccessText || CONTENT.successText;
+      showScreen('success');
+      beginPractice2Recording();
+      runConfetti(() => goState('lesson-practice2'));
+      break;
+    case 'lesson-p1-failure':
+      // Recommendation, then retry Practice 1.
+      showScreen('failure');
+      runFailure(() => goState('lesson-practice1'));
+      break;
+    case 'lesson-practice2':
+      showScreen('practice');
+      setupPractice(currentLesson, /* turn */ 2,
+        () => goState('lesson-p2-success'),
+        () => goState('lesson-p2-failure'));
+      break;
+    case 'lesson-p2-success':
+      // The recorder keeps running in the background for POST_CAPTURE_MS
+      // after the gesture (scheduled in setupPractice); the clip is saved
+      // when that timer fires.  Confetti rolls in parallel.
+      el('#success-msg').textContent = CONTENT.successText;
+      showScreen('success');
+      runConfetti(() => startLesson(lessonIdx + 1));
+      break;
+    case 'lesson-p2-failure':
+      // Recording already aborted in setupPractice's failure timer.
+      // Show recommendation, then countdown (which starts a fresh
+      // 3s recording lead-in) before retrying Practice 2.
+      showScreen('failure');
+      runFailure(() => goState('lesson-countdown-p2'));
+      break;
+    case 'lesson-countdown-p2':
+      // Countdown before a Practice 2 retry — also opens a fresh recording.
+      showScreen('getready');
+      runCountdown(/* withRecording */ true, () => goState('lesson-practice2'));
+      break;
+    case 'all-complete':
+      el('#success-msg').textContent = CONTENT.completeText;
+      showScreen('success');
+      runConfetti(() => {});       // stay on the final screen
+      break;
   }
 }
 
+function startLesson(idx) {
+  if (idx >= CONTENT.lessons.length) {
+    goState('all-complete');
+    return;
+  }
+  lessonIdx = idx;
+  goState('lesson-tutorial');
+}
+
 /* =====================================================================
-   4. TEACH SEQUENCE — per lesson: intro -> countdown -> one video -> "your turn"
-      Every step is passive (auto-advances). The user does nothing until the
-      practice screen. Copy comes from CONTENT, timing from CONFIG.
+   4. INTRO + TUTORIAL — single-video players with placeholder fallback
    ===================================================================== */
-let teachTimer = null;
-function clearTeachTimers() { clearTimeout(teachTimer); }
-
-function teachLesson(lesson, onDone) {
-  showIntro(lesson, () =>
-    runCountdown(() =>
-      runTutorial(lesson, () =>
-        showReady(lesson, onDone))));
-}
-
-function showIntro(lesson, onDone) {
-  const intro = CONTENT.teach[lesson].intro;
-  el('#intro-eyebrow').textContent  = intro.eyebrow;
-  el('#intro-equation').textContent = intro.equation;
-  el('#intro-line').textContent     = intro.line;
-  showScreen('intro');
-  teachTimer = setTimeout(onDone, INTRO_MS);
-}
-
-function runCountdown(onDone) {
-  showScreen('countdown');
-  const numEl = el('#countdown-number');
-  let n = COUNTDOWN_FROM;
-  numEl.textContent = n;
-  (function tick() {
-    teachTimer = setTimeout(() => {
-      n--;
-      if (n >= 1) { numEl.textContent = n; tick(); }
-      else { onDone(); }
-    }, COUNTDOWN_STEP_MS);
-  })();
-}
-
-function showReady(lesson, onDone) {
-  el('#ready-title').textContent = CONTENT.readyTitle;
-  el('#ready-line').innerHTML    = CONTENT.teach[lesson].ready;   // may contain <span class="verb">
-  showScreen('ready');
-  teachTimer = setTimeout(onDone, READY_MS);
-}
-
-/* One tutorial video per lesson (the "with your body" clip). If the asset is
-   missing, show a placeholder and auto-advance — the flow always works. */
-function runTutorial(lesson, onDone) {
-  const vid = el('#tutorial-video');
-  const ph  = el('#tutorial-placeholder');
-  showScreen('tutorial');
-
+function playVideoOnce({ videoEl, placeholderEl, src, placeholderLabel }, onDone) {
   let advanced = false;
   let phTimer = null, maxTimer = null;
-  function cleanup() { vid.onended = vid.onerror = vid.oncanplay = null; clearTimeout(phTimer); clearTimeout(maxTimer); }
+  function cleanup() {
+    videoEl.onended = videoEl.onerror = videoEl.oncanplay = null;
+    clearTimeout(phTimer); clearTimeout(maxTimer);
+  }
   function done() { if (advanced) return; advanced = true; cleanup(); onDone(); }
 
-  vid.classList.remove('hidden');
-  ph.classList.add('hidden');
+  videoEl.classList.remove('hidden');
+  placeholderEl.classList.add('hidden');
 
-  vid.oncanplay = () => { ph.classList.add('hidden'); vid.classList.remove('hidden'); vid.play().catch(() => {}); };
-  vid.onended   = done;
-  vid.onerror   = () => {                         // asset missing -> placeholder, then auto-advance
-    vid.classList.add('hidden');
-    ph.classList.remove('hidden');
+  videoEl.oncanplay = () => {
+    placeholderEl.classList.add('hidden');
+    videoEl.classList.remove('hidden');
+    videoEl.play().catch(() => {});
+  };
+  videoEl.onended = done;
+  videoEl.onerror = () => {
+    videoEl.classList.add('hidden');
+    placeholderEl.classList.remove('hidden');
+    const lbl = placeholderEl.querySelector('.ph-label');
+    if (lbl && placeholderLabel) lbl.textContent = placeholderLabel;
     phTimer = setTimeout(done, PLACEHOLDER_MS);
   };
+  maxTimer = setTimeout(done, MAX_STEP_MS);
 
-  maxTimer = setTimeout(done, MAX_STEP_MS);        // safety: never get stuck
-  vid.src = `assets/tutorials/lesson${lesson}-body.mp4`;
-  vid.load();
+  videoEl.src = encodeURI(src);
+  videoEl.load();
+}
+
+function runIntro(onDone) {
+  playVideoOnce({
+    videoEl: el('#intro-video'),
+    placeholderEl: el('#intro-placeholder'),
+    src: CONTENT.intro.video,
+    placeholderLabel: 'Intro',
+  }, onDone);
+}
+
+function runTutorial(lesson, onDone) {
+  el('#tutorial-title').textContent = lesson.name;
+  el('#tutorial-step-label').textContent = CONTENT.watchPrompt || '';
+  playVideoOnce({
+    videoEl: el('#tutorial-video'),
+    placeholderEl: el('#tutorial-placeholder'),
+    src: lesson.video,
+    placeholderLabel: lesson.name,
+  }, onDone);
 }
 
 /* =====================================================================
-   5. PRACTICE — Lesson 1 (clap) and Lesson 2 (lean then clap)
+   5. COUNTDOWN — 3..2..1 transition screen used in two places:
+        - before "Your first turn" (no recording)
+        - before retrying "Your second turn" after a failure
+          (with `withRecording`, opens a fresh recording window so the
+           clip still captures the 3s BEFORE Practice 2 reappears)
+   ===================================================================== */
+function runCountdown(withRecording, onDone) {
+  el('#getready-text').textContent = CONTENT.getReadyPrompt || 'Get ready…';
+  const countEl = el('#getready-count');
+
+  if (withRecording) beginPractice2Recording();
+
+  let remaining = Math.max(1, Math.round(GET_READY_MS / 1000));
+  countEl.textContent = remaining;
+  const tick = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      clearInterval(tick);
+      onDone();
+    } else {
+      countEl.textContent = remaining;
+    }
+  }, 1000);
+}
+
+/* =====================================================================
+   6. PRACTICE — drives both Practice 1 (no recording) and Practice 2
+                 (silent recording, clip saved on success).
    ===================================================================== */
 function select(which) {
   currentSelection = which;
@@ -255,49 +462,46 @@ function select(which) {
   el('#bad-btn').classList.toggle('selected', which === 'bad');
 }
 
-function setupPractice(lesson) {
-  const badBtn = el('#bad-btn');
+function setupPractice(lesson, turn, onSuccess, onFailure) {
+  const isRecorded = turn === 2;
+  const nextBtn = el('#next-btn');
+  el('#bad-btn').classList.add('hidden');
   el('#help-text').classList.add('hidden');
-  clearTimeout(helpTimer);
 
-  if (lesson === 1) {
-    badBtn.classList.add('hidden');
-    select('next');                              // "next" is pre-selected
-    el('#practice-instruction').innerHTML = CONTENT.teach[1].practice;
+  if (lesson.showNextButton) {
+    nextBtn.classList.remove('hidden');
+    select('next');
   } else {
-    badBtn.classList.remove('hidden');
-    select('bad');                               // "bad" button is pre-selected
-    el('#practice-instruction').innerHTML = CONTENT.teach[2].practice;
+    nextBtn.classList.add('hidden');
   }
+
+  const prefix = isRecorded ? CONTENT.practice2Prefix : CONTENT.practice1Prefix;
+  el('#practice-instruction').textContent = (prefix || '') + lesson.instruction;
+
+  activeExpectedGesture = lesson.gestureKey;
+
+  failureTimer = setTimeout(() => {
+    if (isRecorded) abortPractice2Recording();
+    activeGestureHandler = null;
+    onFailure();
+  }, FAILURE_MS);
 
   helpTimer = setTimeout(showHelp, HELP_DELAY_MS);
-  activeGestureHandler = (g) => handlePractice(lesson, g);
-}
 
-function handlePractice(lesson, gesture) {
-  if (lesson === 1) {
-    if (gesture === 'clap') succeed(1);          // only one button; clap = success
-    return;
-  }
-  // Lesson 2
-  if (gesture === 'leanRight') {
-    if (currentSelection === 'bad') select('next');
-  } else if (gesture === 'leanLeft') {
-    if (currentSelection === 'next') select('bad');
-  } else if (gesture === 'clap') {
-    if (currentSelection === 'next') {
-      succeed(2);
-    } else {
-      // The "bad" button is a decoy only — it performs no real action.
-      showHelp();
+  activeGestureHandler = (g) => {
+    if (g !== lesson.gestureKey) return;
+    activeGestureHandler = null;
+    clearTimeout(failureTimer);
+    clearTimeout(helpTimer);
+
+    if (isRecorded) {
+      // Let the recorder keep running for POST_CAPTURE_MS, then save the
+      // clip — in the background.  Confetti can roll in parallel so the
+      // user sees feedback immediately.
+      setTimeout(() => { endPractice2Recording(lesson); }, POST_CAPTURE_MS);
     }
-  }
-}
-
-function succeed(lesson) {
-  activeGestureHandler = null;
-  clearTimeout(helpTimer);
-  goState(lesson === 1 ? 'lesson1-success' : 'lesson2-success');
+    onSuccess();
+  };
 }
 
 function showHelp() {
@@ -307,7 +511,15 @@ function showHelp() {
 }
 
 /* =====================================================================
-   6. SUCCESS — confetti for ~3 seconds, then continue
+   7. FAILURE — concise feedback + red visual cue, then auto-retry.
+   ===================================================================== */
+function runFailure(onDone) {
+  el('#failure-text').textContent = CONTENT.failureText;
+  setTimeout(onDone, FAILURE_SHOW_MS);
+}
+
+/* =====================================================================
+   8. SUCCESS — confetti for ~3 seconds, then continue (unchanged)
    ===================================================================== */
 let confettiCtx = null, confettiParticles = [], confettiRAF = null;
 function sizeConfetti() {
@@ -353,82 +565,169 @@ function runConfetti(onDone) {
 }
 
 /* =====================================================================
-   7. LESSON LIBRARY — appears only after both onboarding lessons
+   9. RECORDING — MediaRecorder for the silent Practice 2 clip, plus
+                  IndexedDB persistence.  Clip merging/exporting is out
+                  of scope; clips are stored for a future pass.
    ===================================================================== */
-const LESSONS = CONTENT.library;
-let libraryIndex = 0;
+const DB_NAME = 'elderscroll';
+const DB_VERSION = 1;
+const STORE = 'clips';
 
-function setupLibrary() {
-  const wrap = el('#library-cards');
-  wrap.innerHTML = '';
-  LESSONS.forEach((lesson, idx) => {
-    const card = document.createElement('div');
-    card.className = 'lesson-card' + (lesson.unlocked ? '' : ' locked');
-    card.innerHTML =
-      `<h3>${lesson.title}</h3><p>${lesson.desc}</p>` +
-      `<div class="card-tag">${lesson.unlocked ? 'Ready' : 'Coming soon'}</div>`;
-    wrap.appendChild(card);
+function openClipsDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
   });
-  libraryIndex = 0;
-  highlightLibrary();
-  activeGestureHandler = handleLibrary;
 }
 
-function highlightLibrary() {
-  document.querySelectorAll('.lesson-card').forEach((c, i) =>
-    c.classList.toggle('selected', i === libraryIndex));
-}
-
-function handleLibrary(gesture) {
-  if (gesture === 'leanRight') {
-    libraryIndex = Math.min(LESSONS.length - 1, libraryIndex + 1);
-    highlightLibrary();
-  } else if (gesture === 'leanLeft') {
-    libraryIndex = Math.max(0, libraryIndex - 1);
-    highlightLibrary();
-  } else if (gesture === 'clap') {
-    const lesson = LESSONS[libraryIndex];
-    if (lesson.unlocked) {
-      activeGestureHandler = null;
-      goState(lesson.state);                 // re-run that lesson
-    } else {
-      toast(CONTENT.comingSoonToast);
-    }
+async function saveClip({ blob, lessonId, lessonName, gestureLabel }) {
+  try {
+    const db = await openClipsDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const record = {
+        lessonId,
+        lessonName,
+        gestureLabel,
+        timestamp: new Date().toISOString(),
+        mimeType: blob.type,
+        size: blob.size,
+        blob,
+      };
+      const req = store.add(record);
+      req.onsuccess = () => {
+        const id = req.result;
+        const clipReference = `idb://${DB_NAME}/${STORE}/${id}`;
+        console.log('[ElderScroll] clip saved', {
+          id, lessonId, lessonName, gestureLabel,
+          timestamp: record.timestamp, size: record.size, clipReference,
+        });
+        resolve({ id, clipReference });
+      };
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.error('[ElderScroll] saveClip failed', err);
   }
 }
 
-let toastTimer = null;
-function toast(msg) {
-  const t = el('#toast');
-  t.textContent = msg;
-  t.classList.remove('hidden');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.add('hidden'), 1800);
+let mediaRecorder = null;
+let recordingChunks = [];
+
+function beginPractice2Recording() {
+  recordingChunks = [];
+  const stream = camera && camera.srcObject;
+  if (!stream || typeof MediaRecorder === 'undefined') {
+    mediaRecorder = null;
+    return;
+  }
+  const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+  const mime = candidates.find(t => MediaRecorder.isTypeSupported(t));
+  try {
+    mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) recordingChunks.push(e.data);
+    };
+    mediaRecorder.start();
+  } catch (err) {
+    console.error('[ElderScroll] MediaRecorder failed to start', err);
+    mediaRecorder = null;
+    recordingChunks = [];
+  }
 }
 
-/* =====================================================================
-   8. PRESENTER KEYS + DEBUG (fallback so the demo always drives)
-   ===================================================================== */
-function setupPresenterKeys() {
-  document.addEventListener('keydown', (e) => {
-    if (e.key === ' ')          { e.preventDefault(); if (activeGestureHandler) activeGestureHandler('clap'); }
-    else if (e.key === 'ArrowRight') { if (activeGestureHandler) activeGestureHandler('leanRight'); }
-    else if (e.key === 'ArrowLeft')  { if (activeGestureHandler) activeGestureHandler('leanLeft'); }
-    else if (e.key === 'd')     { el('#debug').classList.toggle('hidden'); }
+function endPractice2Recording(lesson) {
+  return new Promise((resolve) => {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+      mediaRecorder = null;
+      resolve();
+      return;
+    }
+    const mime = mediaRecorder.mimeType || 'video/webm';
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(recordingChunks, { type: mime });
+      recordingChunks = [];
+      mediaRecorder = null;
+      await saveClip({
+        blob,
+        lessonId: lesson.id,
+        lessonName: lesson.name,
+        gestureLabel: lesson.gestureLabel,
+      });
+      resolve();
+    };
+    try {
+      mediaRecorder.stop();
+    } catch (err) {
+      console.error('[ElderScroll] MediaRecorder stop failed', err);
+      mediaRecorder = null;
+      recordingChunks = [];
+      resolve();
+    }
   });
 }
 
-function updateDebug(lm, clap, lean) {
+function abortPractice2Recording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.onstop = () => {
+      recordingChunks = [];
+      mediaRecorder = null;
+    };
+    try { mediaRecorder.stop(); } catch (_) { mediaRecorder = null; }
+  } else {
+    recordingChunks = [];
+    mediaRecorder = null;
+  }
+}
+
+/* =====================================================================
+   10. PRESENTER KEYS + DEBUG (fallback so a demo never stalls)
+   ===================================================================== */
+function setupPresenterKeys() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ') {
+      e.preventDefault();
+      // Space fires whatever gesture the current practice expects.
+      if (activeGestureHandler && activeExpectedGesture) {
+        activeGestureHandler(activeExpectedGesture);
+      } else if (activeGestureHandler) {
+        activeGestureHandler('clap');
+      }
+    } else if (e.key === 'ArrowRight') {
+      if (activeGestureHandler) activeGestureHandler('leanRight');
+    } else if (e.key === 'ArrowLeft') {
+      if (activeGestureHandler) activeGestureHandler('leanLeft');
+    } else if (e.key === 'd') {
+      el('#debug').classList.toggle('hidden');
+    }
+  });
+}
+
+function updateDebug(lm) {
   const dbg = el('#debug');
   if (dbg.classList.contains('hidden')) return;
   const ls = lm[11], rs = lm[12];
   const cx = (ls.x + rs.x) / 2;
   const sw = Math.abs(ls.x - rs.x) || 0.2;
   const wristRatio = dist(lm[15], lm[16]) / sw;
-  const offset = baselineX === null ? 0 : (cx - baselineX) / sw;
+  const leanOffset = baselineX === null ? 0 : (cx - baselineX) / sw;
+  const rotateR = baselineShoulderW ? sw / baselineShoulderW : 1;
+  const fires = Object.entries(lastFires)
+    .filter(([_, v]) => v && v !== false)
+    .map(([k, v]) => v === true ? k : `${k}=${v}`)
+    .join(' ');
+  const crossTapStr = isFinite(lastCrossTapDist) ? lastCrossTapDist.toFixed(2) : '-';
   dbg.textContent =
-    `state: ${currentSelection}\n` +
-    `wrist/shoulder: ${wristRatio.toFixed(2)} (clap < ${CLAP_TOGETHER})\n` +
-    `lean offset: ${offset.toFixed(2)} (lean > ${LEAN_ENTER})\n` +
-    `last: ${clap ? 'CLAP ' : ''}${lean ? 'LEAN-' + lean : ''}`;
+    `lesson: ${currentLesson ? currentLesson.id : '-'}  expect: ${activeExpectedGesture || '-'}\n` +
+    `wrist/shoulder: ${wristRatio.toFixed(2)}\n` +
+    `cross-tap dist: ${crossTapStr} (<${CROSS_TAP_DIST})\n` +
+    `lean offset:    ${leanOffset.toFixed(2)} (>${LEAN_ENTER})\n` +
+    `rotate ratio:   ${rotateR.toFixed(2)} (<${ROTATE_RATIO})\n` +
+    `last z (lw/rw): ${(lm[15].z ?? 0).toFixed(2)} / ${(lm[16].z ?? 0).toFixed(2)}\n` +
+    `fires: ${fires || '-'}`;
 }

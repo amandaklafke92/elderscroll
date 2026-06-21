@@ -183,32 +183,40 @@ body {
   color: var(--black);
 }
 
-/* ---------- Library ---------- */
-.library-instruction {
-  font-family: var(--font-body);
-  font-size: 2.4rem;
-  line-height: 1.15;
-  text-align: center;
-  color: var(--black);
-}
-.lesson-card {
-  background: var(--panel);
-  border: 4px solid var(--black);
-  border-radius: 0;
-  box-shadow: 6px 6px 0 var(--black);
-}
-.lesson-card h3 { font-family: var(--font-display); font-size: 1rem; line-height: 1.5; margin: 0; color: var(--black); }
-.lesson-card p { font-size: 1.5rem; line-height: 1.05; color: var(--muted); margin: 0; }
-.lesson-card.locked { opacity: 0.55; }
-.card-tag {
+/* ---------- Get-ready countdown ---------- */
+.getready-count {
   font-family: var(--font-display);
-  font-size: 0.7rem;
-  color: var(--blue-dark);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 4rem;
+  border-radius: 0;
+  background: var(--yellow);
+  color: var(--black);
+  border: 5px solid var(--black);
+  box-shadow: 8px 8px 0 var(--black);
 }
 
-/* ---------- Debug + toast ---------- */
+/* ---------- Failure cue ---------- */
+#screen-failure {
+  /* Visual signal cue: red border around the entire failure screen so the
+     user is left in no doubt that the gesture was not registered. */
+  outline: 8px solid var(--red);
+  outline-offset: -8px;
+  animation: failure-flash 0.6s ease-in-out 2;
+}
+@keyframes failure-flash {
+  0%, 100% { outline-color: var(--red); }
+  50%      { outline-color: var(--red-dark); }
+}
+.failure-cue {
+  font-family: var(--font-display);
+  font-size: 4rem;
+  border-radius: 0;
+  background: var(--red);
+  color: #fff;
+  border: 5px solid var(--black);
+  box-shadow: 8px 8px 0 var(--black);
+}
+
+/* ---------- Debug ---------- */
 #debug {
   background: var(--black);
   color: #8fffa6;
@@ -216,68 +224,4 @@ body {
   font-size: 13px;
   padding: 10px 12px;
   border-radius: 0;
-}
-#toast {
-  background: var(--yellow);
-  color: var(--black);
-  font-family: var(--font-display);
-  font-size: 1rem;
-  padding: 16px 26px;
-  border: 4px solid var(--black);
-  box-shadow: 6px 6px 0 var(--black);
-}
-
-/* ---------- Intro / countdown / "your turn" screens ---------- */
-.intro-eyebrow {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  letter-spacing: 2px;
-  color: var(--blue-dark);
-  margin: 0;
-}
-.intro-equation {
-  font-family: var(--font-display);
-  font-size: 2.6rem;
-  line-height: 1.3;
-  color: var(--black);
-  margin: 0;
-  text-shadow: 4px 4px 0 var(--blue);   /* arcade-style hard shadow */
-}
-.intro-line {
-  font-family: var(--font-body);
-  font-size: 2.1rem;
-  line-height: 1.15;
-  color: var(--text);
-  max-width: 22ch;
-  margin: 0;
-}
-.countdown-number {
-  font-family: var(--font-display);
-  font-size: 9rem;
-  color: var(--black);
-  text-shadow: 6px 6px 0 var(--blue);
-}
-.ready-title {
-  font-family: var(--font-display);
-  font-size: 2.4rem;
-  color: var(--black);
-  margin: 0;
-  text-shadow: 4px 4px 0 var(--red);
-}
-.ready-line {
-  font-family: var(--font-body);
-  font-size: 2.3rem;
-  line-height: 1.15;
-  color: var(--text);
-  max-width: 24ch;
-  margin: 0;
-}
-
-/* Highlighted action word(s) in instructions — a yellow marker so the
-   verb (CLAP / LEAN / RIGHT) stands out. Used in intro, "your turn",
-   and the practice cue. */
-.verb {
-  background: var(--yellow);
-  color: var(--black);
-  padding: 0 0.25em;
 }
