@@ -41,17 +41,37 @@
     </div>
   </section>
 
-  <!-- TUTORIAL (shared by Lesson 1 and Lesson 2) -->
+  <!-- INTRO (shared; content set per lesson) — explains the lesson, text only -->
+  <section id="screen-intro" class="screen screen-opaque hidden">
+    <div class="center-stack">
+      <p  id="intro-eyebrow"  class="intro-eyebrow"></p>
+      <h1 id="intro-equation" class="intro-equation"></h1>
+      <p  id="intro-line"     class="intro-line"></p>
+    </div>
+  </section>
+
+  <!-- COUNTDOWN (shared) — 3 · 2 · 1 before the video -->
+  <section id="screen-countdown" class="screen screen-opaque hidden">
+    <div id="countdown-number" class="countdown-number"></div>
+  </section>
+
+  <!-- TUTORIAL VIDEO (shared) — one video per lesson, nothing else on screen -->
   <section id="screen-tutorial" class="screen screen-opaque hidden">
-    <h2 id="tutorial-title" class="screen-title"></h2>
-    <p id="tutorial-step-label" class="step-label"></p>
     <div class="video-frame">
       <video id="tutorial-video" class="hidden" playsinline></video>
       <div id="tutorial-placeholder" class="placeholder hidden">
         <div class="ph-icon">▶</div>
         <div class="ph-label">Tutorial video</div>
-        <div class="ph-sub">(placeholder — video added later)</div>
+        <div class="ph-sub">(coming soon)</div>
       </div>
+    </div>
+  </section>
+
+  <!-- YOUR TURN (shared; content set per lesson) — primes the practice action -->
+  <section id="screen-ready" class="screen screen-opaque hidden">
+    <div class="center-stack">
+      <h1 id="ready-title" class="ready-title"></h1>
+      <p  id="ready-line"  class="ready-line"></p>
     </div>
   </section>
 

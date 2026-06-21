@@ -12,10 +12,16 @@ const LEAN_ENTER      = CONFIG.leanEnter;
 const LEAN_EXIT       = CONFIG.leanExit;
 const LEAN_RIGHT_SIGN = CONFIG.leanRightSign;
 
-const PLACEHOLDER_MS  = CONFIG.placeholderMs;
-const MAX_STEP_MS     = CONFIG.maxStepMs;
-const CONFETTI_MS     = CONFIG.confettiMs;
-const HELP_DELAY_MS   = CONFIG.helpDelayMs;
+const PLACEHOLDER_MS   = CONFIG.placeholderMs;
+const MAX_STEP_MS      = CONFIG.maxStepMs;
+const CONFETTI_MS      = CONFIG.confettiMs;
+const HELP_DELAY_MS    = CONFIG.helpDelayMs;
+
+/* Teach-sequence pacing */
+const INTRO_MS          = CONFIG.introMs;
+const COUNTDOWN_FROM    = CONFIG.countdownFrom;
+const COUNTDOWN_STEP_MS = CONFIG.countdownStepMs;
+const READY_MS          = CONFIG.readyMs;
 
 /* ---------- MediaPipe CDN locations (verified reachable) ---------- */
 const MP_BUNDLE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
@@ -155,83 +161,89 @@ function showScreen(name) {
 
 function goState(state) {
   activeGestureHandler = null;          // ignore gestures unless a screen opts in
+  clearTeachTimers();                   // cancel any pending teach-screen timers
   switch (state) {
-    case 'lesson1-tutorial':
-      showScreen('tutorial');
-      runTutorial(1, () => goState('lesson1-practice'));
-      break;
-    case 'lesson1-practice':
-      showScreen('practice');
-      setupPractice(1);
-      break;
-    case 'lesson1-success':
-      showScreen('success');
-      runConfetti(() => goState('lesson2-tutorial'));
-      break;
-    case 'lesson2-tutorial':
-      showScreen('tutorial');
-      runTutorial(2, () => goState('lesson2-practice'));
-      break;
-    case 'lesson2-practice':
-      showScreen('practice');
-      setupPractice(2);
-      break;
-    case 'lesson2-success':
-      showScreen('success');
-      runConfetti(() => goState('library'));    // onboarding done -> library
-      break;
-    case 'library':
-      showScreen('library');
-      setupLibrary();
-      break;
+    case 'lesson1-tutorial': teachLesson(1, () => goState('lesson1-practice')); break;
+    case 'lesson1-practice': showScreen('practice'); setupPractice(1); break;
+    case 'lesson1-success':  showScreen('success'); runConfetti(() => goState('lesson2-tutorial')); break;
+    case 'lesson2-tutorial': teachLesson(2, () => goState('lesson2-practice')); break;
+    case 'lesson2-practice': showScreen('practice'); setupPractice(2); break;
+    case 'lesson2-success':  showScreen('success'); runConfetti(() => goState('library')); break;  // onboarding done -> library
+    case 'library':          showScreen('library'); setupLibrary(); break;
   }
 }
 
 /* =====================================================================
-   4. TUTORIAL — two video slots, placeholders if assets are missing
+   4. TEACH SEQUENCE — per lesson: intro -> countdown -> one video -> "your turn"
+      Every step is passive (auto-advances). The user does nothing until the
+      practice screen. Copy comes from CONTENT, timing from CONFIG.
    ===================================================================== */
+let teachTimer = null;
+function clearTeachTimers() { clearTimeout(teachTimer); }
+
+function teachLesson(lesson, onDone) {
+  showIntro(lesson, () =>
+    runCountdown(() =>
+      runTutorial(lesson, () =>
+        showReady(lesson, onDone))));
+}
+
+function showIntro(lesson, onDone) {
+  const intro = CONTENT.teach[lesson].intro;
+  el('#intro-eyebrow').textContent  = intro.eyebrow;
+  el('#intro-equation').textContent = intro.equation;
+  el('#intro-line').textContent     = intro.line;
+  showScreen('intro');
+  teachTimer = setTimeout(onDone, INTRO_MS);
+}
+
+function runCountdown(onDone) {
+  showScreen('countdown');
+  const numEl = el('#countdown-number');
+  let n = COUNTDOWN_FROM;
+  numEl.textContent = n;
+  (function tick() {
+    teachTimer = setTimeout(() => {
+      n--;
+      if (n >= 1) { numEl.textContent = n; tick(); }
+      else { onDone(); }
+    }, COUNTDOWN_STEP_MS);
+  })();
+}
+
+function showReady(lesson, onDone) {
+  el('#ready-title').textContent = CONTENT.readyTitle;
+  el('#ready-line').innerHTML    = CONTENT.teach[lesson].ready;   // may contain <span class="verb">
+  showScreen('ready');
+  teachTimer = setTimeout(onDone, READY_MS);
+}
+
+/* One tutorial video per lesson (the "with your body" clip). If the asset is
+   missing, show a placeholder and auto-advance — the flow always works. */
 function runTutorial(lesson, onDone) {
-  const labels = CONTENT.tutorials[lesson].steps;
-  const steps = [
-    { src: `assets/tutorials/lesson${lesson}-finger.mp4`, label: labels[0] },
-    { src: `assets/tutorials/lesson${lesson}-body.mp4`,   label: labels[1] },
-  ];
-  const vid   = el('#tutorial-video');
-  const ph    = el('#tutorial-placeholder');
-  const lbl   = el('#tutorial-step-label');
-  el('#tutorial-title').textContent = CONTENT.tutorials[lesson].title;
+  const vid = el('#tutorial-video');
+  const ph  = el('#tutorial-placeholder');
+  showScreen('tutorial');
 
-  let i = 0;
-  function playStep() {
-    if (i >= steps.length) { onDone(); return; }
-    const s = steps[i];
-    lbl.textContent = s.label;
+  let advanced = false;
+  let phTimer = null, maxTimer = null;
+  function cleanup() { vid.onended = vid.onerror = vid.oncanplay = null; clearTimeout(phTimer); clearTimeout(maxTimer); }
+  function done() { if (advanced) return; advanced = true; cleanup(); onDone(); }
 
-    let advanced = false;
-    let phTimer = null, maxTimer = null;
-    function cleanup() {
-      vid.onended = vid.onerror = vid.oncanplay = null;
-      clearTimeout(phTimer); clearTimeout(maxTimer);
-    }
-    function next() { if (advanced) return; advanced = true; cleanup(); i++; playStep(); }
+  vid.classList.remove('hidden');
+  ph.classList.add('hidden');
 
-    vid.classList.remove('hidden');
-    ph.classList.add('hidden');
+  vid.oncanplay = () => { ph.classList.add('hidden'); vid.classList.remove('hidden'); vid.play().catch(() => {}); };
+  vid.onended   = done;
+  vid.onerror   = () => {                         // asset missing -> placeholder, then auto-advance
+    vid.classList.add('hidden');
+    ph.classList.remove('hidden');
+    phTimer = setTimeout(done, PLACEHOLDER_MS);
+  };
 
-    vid.oncanplay = () => { ph.classList.add('hidden'); vid.classList.remove('hidden'); vid.play().catch(() => {}); };
-    vid.onended   = next;
-    vid.onerror   = () => {                      // asset missing -> show placeholder, auto-advance
-      vid.classList.add('hidden');
-      ph.classList.remove('hidden');
-      ph.querySelector('.ph-label').textContent = s.label;
-      phTimer = setTimeout(next, PLACEHOLDER_MS);
-    };
-
-    maxTimer = setTimeout(next, MAX_STEP_MS);    // safety: never get stuck on a step
-    vid.src = s.src;
-    vid.load();
-  }
-  playStep();
+  maxTimer = setTimeout(done, MAX_STEP_MS);        // safety: never get stuck
+  vid.src = `assets/tutorials/lesson${lesson}-body.mp4`;
+  vid.load();
 }
 
 /* =====================================================================
@@ -251,11 +263,11 @@ function setupPractice(lesson) {
   if (lesson === 1) {
     badBtn.classList.add('hidden');
     select('next');                              // "next" is pre-selected
-    el('#practice-instruction').textContent = CONTENT.practice[1];
+    el('#practice-instruction').innerHTML = CONTENT.teach[1].practice;
   } else {
     badBtn.classList.remove('hidden');
     select('bad');                               // "bad" button is pre-selected
-    el('#practice-instruction').textContent = CONTENT.practice[2];
+    el('#practice-instruction').innerHTML = CONTENT.teach[2].practice;
   }
 
   helpTimer = setTimeout(showHelp, HELP_DELAY_MS);
@@ -343,7 +355,7 @@ function runConfetti(onDone) {
 /* =====================================================================
    7. LESSON LIBRARY — appears only after both onboarding lessons
    ===================================================================== */
-const LESSONS = CONTENT.lessons;
+const LESSONS = CONTENT.library;
 let libraryIndex = 0;
 
 function setupLibrary() {
