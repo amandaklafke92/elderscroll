@@ -20,6 +20,18 @@ learning tech, the laptop camera records them performing the moves — and the c
 are stitched into a side-by-side recreation of the original TikTok. The reveal is the
 payoff.
 
+## The Batman mask
+
+Some participants are shy about being on camera — so we 3D-printed a Batman mask
+anyone could wear to hide their identity while they "learn."
+
+The idea came from a teammate's husband, a child psychologist. He gives kids a
+Batman mask when they're scared to face something — a challenge at school, a fear
+they can't get past — because if *they* can't do it, Batman can. The mask gives
+them a braver self to step into. We borrowed the same trick: put the mask on, and
+performing daft "tech lessons" in front of a camera stops being so daunting. (It's
+also why the reveal renders "to the batcave.")
+
 ## The user journey
 
 | | |
