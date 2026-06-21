@@ -19,7 +19,8 @@ the moves. The clips are reordered, stitched together, and revealed as a
 recording stays secret until then.
 
 > This is a hackathon gag demoed in front of an audience — not a real product shipped
-> to real elderly people.
+> to real elderly people. **We build one version only: the elderly one.** (An earlier
+> plan to ship multiple persona versions has been dropped.)
 
 ### Gesture map (the new set)
 - click = **clap**
@@ -57,55 +58,38 @@ Full plan with the *why* per task: `action-plan_elderscroll-2026-06-20.md`.
 
 ---
 
-## Architecture — engine vs. persona
+## Code layout
 
-This repo is **one shared engine** plus **persona skins** of the same gesture-driven
-product. The first persona is **Elders** ("ElderScroll"); others reuse the exact same
-engine.
+It's a single app. The code is split into a reusable **engine** and the **ElderScroll
+skin** (copy, tuning, look) so wording/visuals/feel can change without touching engine
+logic.
 
-> **The one rule:** Core logic is shared by every persona. To change how a persona
-> looks, reads, or feels, edit ONLY that persona's folder — never the core. A core
-> change affects *every* persona; when in doubt, it goes in the persona folder.
-
-### Layout
 ```
-index.html              ← wiring: loads a persona's files, then the engine
-app.js                  ← CORE engine: gesture detection, state machine, flow
-base.css                ← CORE layout skeleton: positioning, stacking, sizes
-personas/
-  elders/               ← one persona = one folder
-    config.js           ←   gesture sensitivity + pacing (the "feel" knobs)
-    content.js          ←   all user-facing copy + the lesson list
-    theme.css           ←   the visual identity: colours, fonts, borders, shadows
-assets/                 ← shared media (tutorial videos, etc.)
+index.html              ← wiring: loads the skin files, then the engine
+app.js                  ← ENGINE: gesture detection, state machine, flow, confetti
+base.css                ← layout skeleton: positioning, stacking, sizes, camera
+personas/elders/        ← the ElderScroll skin
+  config.js             ←   gesture sensitivity + pacing (the "feel" knobs) → CONFIG
+  content.js            ←   all on-screen copy + lesson list → CONTENT
+  theme.css             ←   colours, fonts, borders (loads after base.css)
+assets/                 ← media (tutorial videos, recorded clips, etc.)
 ```
 
-### CORE — `app.js` / `base.css`
-The engine: gesture detection, the screen state machine, the flow, confetti. It holds
-**no** persona wording or styling — it reads everything persona-specific from the
-`CONFIG` and `CONTENT` globals. `base.css` is load-bearing layout only (positioning,
-z-index, show/hide, the fullscreen camera, gesture-target positions).
+- **Engine (`app.js` / `base.css`)** holds no copy or styling — it reads everything
+  from the `CONFIG` and `CONTENT` globals. The new pivot features (recording, stitching,
+  reveal, expanded gestures, practice-1/2) go here.
+- **Skin (`personas/elders/*`)** is where copy, tuning numbers, and the look live.
+  `config.js` / `content.js` define the `CONFIG` / `CONTENT` globals and load **before**
+  `app.js`; `theme.css` loads **after** `base.css`. Keep that order if you edit
+  `index.html`.
 
-**The new pivot features — recording, stitching, the reveal screen, the expanded
-gesture set, the practice-1/2 flow — are ENGINE-level (cross-persona).** They live in
-`app.js` / `base.css` and land for *every* persona, so coordinate before changing them.
-
-### PERSONA — edit freely, but only inside your own folder
-- **`config.js`** → `CONFIG`: clap/lean sensitivity and timing.
-- **`content.js`** → `CONTENT`: every on-screen string + the lesson list.
-- **`theme.css`** → the whole look; loads *after* `base.css` and paints on top.
-
-`config.js` / `content.js` define globals (`CONFIG`, `CONTENT`) loaded as plain
-`<script>`s **before** `app.js`; `theme.css` loads **after** `base.css`. Keep that load
-order if you touch `index.html`.
+> The `personas/elders/` folder path is a leftover from the old multi-persona idea —
+> harmless, and not worth flattening mid-hackathon. We can collapse it later if we care.
 
 ---
 
 ## Instructions for AI assistants
-- If asked to change **wording, look, colours, fonts, or gesture feel**, edit **only**
-  the relevant `personas/<name>/` file — **do not** edit `app.js` or `base.css`.
-- If a request needs an engine change (`app.js` / `base.css`) — including any of the new
-  pivot features above — **say so explicitly** and flag that it affects every persona
-  before doing it.
-- Keep the seam clean: no persona-specific strings, colours, or tuning numbers in the
-  core.
+- Copy / look / feel changes → edit `personas/elders/*` (`content.js`, `theme.css`,
+  `config.js`), not the engine.
+- Engine changes (`app.js` / `base.css`) — including the new pivot features above — are
+  expected now; just keep copy, colours, and tuning numbers **out** of the engine.

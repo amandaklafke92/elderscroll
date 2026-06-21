@@ -5,8 +5,8 @@
    persona-specific wording of its own.
 
    Loaded as a plain <script> BEFORE app.js, so `CONTENT` is available
-   as a shared global. To make a new persona, copy this file, change the
-   strings, and point index.html at your copy instead.
+   as a global. This is the only version we ship (the elderly one) —
+   all on-screen copy lives here, kept out of the engine.
 
    Each lesson is taught as: intro → countdown → one video → "your turn"
    → practice. `<span class="verb">…</span>` highlights the action word(s)
