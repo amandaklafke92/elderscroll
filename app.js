@@ -589,7 +589,9 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
   }
 
   const prefix = isRecorded ? CONTENT.practice2Prefix : CONTENT.practice1Prefix;
-  el('#practice-instruction').textContent = (prefix || '') + lesson.instruction;
+  // innerHTML so <strong> markers inside lesson.instruction get highlighted
+  // via the .instruction strong rule in theme.css. Prefix is plain text.
+  el('#practice-instruction').innerHTML = (prefix || '') + lesson.instruction;
 
   activeExpectedGesture = lesson.gestureKey;
 
