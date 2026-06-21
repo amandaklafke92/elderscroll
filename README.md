@@ -42,6 +42,13 @@ also why the reveal renders "to the batcave.")
 | **4d. Success** — gesture detected, on to the next. <br><img src="assets/screenshots/04d-success.png" width="380" /> | **5. Gift** — after the last lesson, a short message. <br><img src="assets/screenshots/05-gift.png" width="380" /> |
 | **6a. Saving** — the reel renders ("to the batcave"). <br><img src="assets/screenshots/06a-saving-to-batcave.png" width="380" /> | **6b. Reveal** — the finished reel plays with a download link. <br><img src="assets/screenshots/06b-download-video.png" width="380" /> |
 
+## The team
+
+Five people, none of them professional software engineers: a mechanical engineer,
+an electrical engineer, a 14-year-old, a product manager, and an operations manager.
+The prototype started in ChatGPT; from there we extracted the code, wrote a quick
+PRD off a flow-mapping session, and vibe-coded the rest over about two days.
+
 ## Run it
 
 Open two terminal windows in this folder.

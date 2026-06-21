@@ -51,13 +51,22 @@ unique download link. Background replacement is attempted during rendering and f
 back to the real camera background if segmentation is unavailable.
 
 ### Who owns what (hackathon — as it actually shipped)
+
+How it came together: **Happy** built the initial movement/body-recognition
+prototype in ChatGPT. **Camilla** and **Amanda** extracted the code from it and —
+after a team meeting mapping out the user flows — wrote the PRD, built the MVP, then
+refined it together: UI/theme changes, UX copy (help text, instructions), the final
+gesture + tutorial set, and tuning the movement-recognition sensitivity.
+
 - **Amanda** — recording + stitching + the final reveal screen; also built the
   background superimposition and added the music (both via Claude), using the
   background and track Joumana sourced.
 - **Camilla** — user-flow updates (remove library, auto-advance, practice-1/2,
   countdown) + tutorial videos.
 - **Joumana** — camera placement + ideal real-world background; sourced the
-  background image and the music track (Amanda wired both into the render).
+  background image and the music track (Amanda wired both into the render); built
+  the Lovable site that stores the videos and lets users watch/download their own.
+- **Happy** — the initial movement/body-recognition prototype.
 
 Full plan with the *why* per task: `docs/action-plan_elderscroll-2026-06-20.md`.
 
