@@ -57,8 +57,8 @@ const CONTENT = {
       name: 'Zoom In',
       video: 'Videos/zoom in.mp4',
       gestureKey: 'reachUp',
-      gestureLabel: 'Reach one arm up overhead',
-      instruction: 'Raise one arm straight up above your head.',
+      gestureLabel: 'Reach both arms up overhead',
+      instruction: 'Raise both arms straight up above your head.',
     },
     {
       id: 'zoom-out',

@@ -233,15 +233,16 @@ function detectPushForward(lm) {
   return holdGate(pushForwardState, wristsForward && wristsAtShoulderY);
 }
 
-/* --- Zoom In = one arm extended overhead. Wrist above nose by margin. */
+/* --- Zoom In = BOTH arms extended overhead. Both wrists must clear the
+   nose by REACH_UP_MARGIN (image-space units; smaller y = higher). */
 const reachUpState = { frames: 0, last: 0 };
 function detectReachUp(lm) {
   const nose = lm[0], lw = lm[15], rw = lm[16];
-  if (!visible(nose) || !(visible(lw) || visible(rw))) return false;
-  const above =
-    (visible(lw) && lw.y < nose.y - REACH_UP_MARGIN) ||
-    (visible(rw) && rw.y < nose.y - REACH_UP_MARGIN);
-  return holdGate(reachUpState, above);
+  if (!visible(nose) || !visible(lw) || !visible(rw)) return false;
+  const bothAbove =
+    lw.y < nose.y - REACH_UP_MARGIN &&
+    rw.y < nose.y - REACH_UP_MARGIN;
+  return holdGate(reachUpState, bothAbove);
 }
 
 /* --- Zoom Out = wrists transition from near each other at chest
