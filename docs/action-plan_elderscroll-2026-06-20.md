@@ -1,6 +1,10 @@
 # ElderScroll — Hackathon Action Plan
 *Terrible Ideas Hackathon · drafted 2026-06-21 · 6-hour build*
 
+> **Note:** Written on the morning of day 2. The initial movement/body-recognition
+> prototype was already built the night before (in ChatGPT) — this plan picks up
+> from there to extend it into the full app.
+
 ## What we're building (the bit)
 A "learn technology with body movements" app for elderly users. The tech-gesture
 framing is **misdirection** — each gesture secretly maps to a move from a TikTok.
