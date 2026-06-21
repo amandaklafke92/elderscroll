@@ -29,10 +29,18 @@ const CONFIG = {
      camera angle and how tightly the fingers reach the shoulder. */
   crossTapDist:    0.7,
 
-  /* Move = bilateral push forward. Both wrists' z (depth) must drop
-     below this (more negative = closer to camera) AND sit near
-     shoulder height.  More negative = arms must be pushed further out. */
-  pushForwardZ:    -0.40,
+  /* Move = bilateral push forward. Two-stage detector:
+       (1) ARM  — both wrists pulled back near the body. Triggers when
+                  wrist.z is ABOVE pushBackZ (z near 0 = wrists at the
+                  body's depth plane; positive = slightly behind it).
+       (2) FIRE — both wrists thrust forward. Triggers when wrist.z
+                  is BELOW pushForwardZ (the more negative, the further
+                  out the arms must reach).
+     The arming step is what stops the gesture firing on a partial push.
+     Tune `pushBackZ` upward if it's hard to arm; tune `pushForwardZ`
+     more negative if it still fires before the full extension. */
+  pushBackZ:        0.0,
+  pushForwardZ:    -0.55,
 
   /* Zoom In = one arm straight up. A wrist must rise above the nose by
      at least this much (normalized image y units). Larger = the hand
