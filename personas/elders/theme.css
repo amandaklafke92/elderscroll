@@ -1,31 +1,33 @@
 /* =====================================================================
-   theme.css — PERSONA SKIN (Elders, "ElderScroll")
+   theme.css — PERSONA SKIN (Elders, "ElderScroll") — BATMAN EDITION
 
    The entire visual identity: colour + font design tokens, borders,
    shadows, font sizes, decorative backgrounds. Loads AFTER base.css and
    paints the look on top of the shared layout skeleton.
 
-   This file is yours to change freely. To make a new persona, copy this
-   file (plus config.js + content.js) into personas/<your-persona>/ and
-   restyle. You should not need to touch base.css or app.js.
+   Batman pixel-art skin: Gotham purple night + bat-yellow accents. The
+   `--black` token is repurposed to bat-yellow so every pixel border/shadow
+   becomes yellow automatically; a dedicated `--ink` is used for dark text
+   that sits ON yellow surfaces (so it never goes yellow-on-yellow).
 
    NOTE: this theme also chooses the web fonts ('Press Start 2P', 'VT323'),
-   which are loaded via a <link> in index.html. A persona using different
-   fonts updates BOTH the --font-* tokens below and that <link>.
+   which are loaded via a <link> in index.html.
    ===================================================================== */
 
 :root {
-  --bg:        #e6e7ea;        /* light grey background */
-  --panel:     #ffffff;        /* white pixel panels */
-  --black:     #16181d;        /* outlines + text */
-  --text:      #16181d;
-  --muted:     #5a6172;
-  --blue:      #1f9cff;        /* "next" button + primary accent */
-  --blue-dark: #0b6fc2;
-  --red:       #ef4d4d;        /* "bad" button + coral accent */
-  --red-dark:  #b9302f;
-  --green:     #2faa4f;        /* success */
-  --yellow:    #ffd400;        /* SELECTED state border (required by PRD) */
+  --bg:        #5b2d8e;        /* batman purple — the Gotham night */
+  --panel:     #3d1a6e;        /* darker purple for panels/inputs */
+  --black:     #ffd700;        /* bat-yellow — pixel borders + hard shadows */
+  --ink:       #16181d;        /* dark text for use ON yellow surfaces */
+  --text:      #f0e0ff;        /* light lavender — main text on purple */
+  --muted:     #c3aee0;        /* readable muted lavender on purple */
+  --blue:      #ffd700;        /* primary action accent = bat-yellow */
+  --blue-dark: #c4a200;        /* darker yellow for hover/active */
+  --red:       #ff3b3b;        /* "bad" button + failure cue */
+  --red-dark:  #cc1f1f;
+  --green:     #33cc66;        /* success */
+  --yellow:    #ffd700;        /* highlight / accent */
+  --shadow-purple: #1e0a3c;    /* deep purple for heading drop-shadows */
 
   --font-display: 'Press Start 2P', 'Courier New', monospace;  /* short labels/headings */
   --font-body:    'VT323', 'Courier New', monospace;           /* readable body text */
@@ -35,20 +37,20 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   background-color: var(--bg);
-  /* faint graph-paper grid for a pixel feel */
+  /* faint bat-yellow grid for a pixel feel over the Gotham night */
   background-image:
-    linear-gradient(rgba(0,0,0,0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.045) 1px, transparent 1px);
+    linear-gradient(rgba(255,215,0,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,215,0,0.07) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-/* Reusable "pixel box" look = thick black border + hard (blur-free) shadow */
+/* Reusable "pixel box" look = thick yellow border + hard (blur-free) shadow */
 .pixel-shadow { box-shadow: 6px 6px 0 var(--black); }
 
 .screen-opaque {
   background-image:
-    linear-gradient(rgba(0,0,0,0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.045) 1px, transparent 1px);
+    linear-gradient(rgba(255,215,0,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,215,0,0.07) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -60,30 +62,52 @@ body {
   font-size: 1.9rem;
   line-height: 1.4;
   margin: 2vh 0 0.5rem;
-  color: var(--black);
+  color: var(--yellow);
 }
 .brand {
   font-family: var(--font-display);
   font-size: 3rem;
   margin: 0;
-  color: var(--black);
-  text-shadow: 5px 5px 0 var(--blue);   /* arcade-style hard offset shadow */
+  color: var(--yellow);
+  text-shadow: 5px 5px 0 var(--shadow-purple);   /* arcade-style hard offset shadow */
 }
 .subtitle { font-size: 2rem; color: var(--muted); margin: 0; }
+
+/* Start screen layout: brand block on top, hero sprite in the middle,
+   action block at the bottom — three clear zones. */
+.start-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.hero-sprite {
+  width: min(380px, 88vw);
+  image-rendering: pixelated;
+  display: block;
+  margin: 0 auto;
+}
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
 
 .big-action {
   font-family: var(--font-display);
   font-size: 1.5rem;
   padding: 22px 48px;
-  border: 4px solid var(--black);
+  border: 4px solid var(--yellow);
   border-radius: 0;
-  background: var(--blue);
-  color: #fff;
+  background: #2a0f4e;
+  color: var(--yellow);
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 6px 6px 0 var(--black);
+  box-shadow: 6px 6px 0 var(--yellow);
 }
-.big-action:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 var(--black); }
+.big-action:hover { background: #3d1a6e; }
+.big-action:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 var(--yellow); }
 
 .status { font-size: 1.6rem; color: var(--muted); min-height: 1.6em; }
 .presenter-hint { font-size: 1.4rem; color: var(--muted); margin-top: 26px; }
@@ -92,7 +116,7 @@ body {
 .step-label {
   font-family: var(--font-display);
   font-size: 1.1rem;
-  color: var(--blue-dark);
+  color: var(--yellow);
   margin: 0 0 2vh;
 }
 .video-frame {
@@ -105,34 +129,34 @@ body {
 .ph-icon {
   font-size: 3rem;
   border-radius: 0;
-  background: var(--blue);
-  color: #fff;
+  background: var(--yellow);
+  color: var(--ink);
   border: 4px solid var(--black);
 }
-.ph-label { font-family: var(--font-display); font-size: 1rem; color: var(--black); text-align: center; }
-.ph-sub { font-size: 1.4rem; }
+.ph-label { font-family: var(--font-display); font-size: 1rem; color: var(--text); text-align: center; }
+.ph-sub { font-size: 1.4rem; color: var(--muted); }
 
 /* ---------- Name input ---------- */
 .intro-eyebrow {
   font-family: var(--font-display);
   font-size: 1rem;
   letter-spacing: 2px;
-  color: var(--blue-dark);
+  color: var(--yellow);
   margin: 0;
 }
 .intro-equation {
   font-family: var(--font-display);
   font-size: 2.6rem;
   line-height: 1.3;
-  color: var(--black);
+  color: var(--yellow);
   margin: 0;
-  text-shadow: 4px 4px 0 var(--blue);
+  text-shadow: 4px 4px 0 var(--shadow-purple);
 }
 .name-input {
   font-family: var(--font-body);
   font-size: 2.2rem;
   text-align: center;
-  color: var(--black);
+  color: var(--text);
   background: var(--panel);
   border: 4px solid var(--black);
   border-radius: 0;
@@ -141,7 +165,7 @@ body {
   width: min(80vw, 480px);
   outline: none;
 }
-.name-input:focus { border-color: var(--blue); }
+.name-input:focus { border-color: var(--yellow); }
 .name-input::placeholder { color: var(--muted); }
 
 /* ---------- Reveal / download ---------- */
@@ -152,17 +176,17 @@ body {
 .download-link {
   font-family: var(--font-display);
   font-size: 0.9rem;
-  color: #fff;
-  background: var(--blue);
-  border: 4px solid var(--black);
-  box-shadow: 5px 5px 0 var(--black);
+  color: var(--ink);
+  background: var(--yellow);
+  border: 4px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
   padding: 14px 20px;
   text-decoration: none;
   text-transform: uppercase;
 }
 .download-link:active {
   transform: translate(2px, 2px);
-  box-shadow: 3px 3px 0 var(--black);
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
 /* ---------- Practice ---------- */
@@ -171,7 +195,7 @@ body {
   font-size: 2.2rem;
   line-height: 1.2;
   text-align: center;
-  color: var(--black);
+  color: var(--text);
   background: var(--panel);
   border: 4px solid var(--black);
   box-shadow: 6px 6px 0 var(--black);
@@ -180,7 +204,7 @@ body {
 /* Key gesture words inside the instruction get a pixel-art highlight. */
 .instruction strong {
   background: var(--yellow);
-  color: var(--black);
+  color: var(--ink);
   padding: 0 0.25em;
   font-weight: normal;        /* the body font is VT323 — boldness comes from the highlight, not the weight */
 }
@@ -189,7 +213,7 @@ body {
   padding: 22px 30px;
   border-radius: 0;
   border: 4px solid var(--black);
-  color: #fff;
+  color: var(--ink);
   cursor: default;
   box-shadow: 6px 6px 0 var(--black);
   line-height: 1.5;
@@ -199,18 +223,21 @@ body {
   text-transform: uppercase;
   letter-spacing: 2px;
   text-align: center;
-  background: var(--blue);
+  background: var(--yellow);
+  color: var(--ink);
 }
 .bad-btn {
   font-size: 0.85rem;     /* long label, so a smaller pixel size keeps it tidy */
   background: var(--red);
+  color: #fff;
   text-align: center;
 }
-/* Yellow-border SELECTED state (keeps the hard shadow) */
+/* SELECTED state — white border so it reads against the yellow buttons
+   (a yellow-on-yellow border was invisible). Keeps the hard shadow. */
 .practice-btn.selected,
 .lesson-card.selected {
-  border-color: var(--yellow);
-  box-shadow: 0 0 0 4px rgba(255, 212, 0, 0.45), 6px 6px 0 var(--black);
+  border-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.5), 6px 6px 0 var(--black);
 }
 
 /* ---------- Help / error text ---------- */
@@ -220,10 +247,10 @@ body {
   line-height: 1.15;
   text-align: center;
   background: var(--yellow);
-  color: var(--black);
+  color: var(--ink);
   padding: 16px 24px;
-  border: 4px solid var(--black);
-  box-shadow: 6px 6px 0 var(--black);
+  border: 4px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
 }
 
 /* ---------- Success ---------- */
@@ -232,7 +259,7 @@ body {
   font-size: 3.4rem;
   border-radius: 0;
   background: var(--green);
-  color: #fff;
+  color: var(--ink);
   border: 5px solid var(--black);
   box-shadow: 8px 8px 0 var(--black);
 }
@@ -240,7 +267,7 @@ body {
   font-family: var(--font-display);
   font-size: 2rem;
   margin: 0;
-  color: var(--black);
+  color: var(--text);
 }
 
 /* ---------- Gift message ---------- */
@@ -250,8 +277,8 @@ body {
   line-height: 1.45;
   max-width: 22ch;
   margin: 0;
-  color: var(--black);
-  text-shadow: 4px 4px 0 var(--yellow);
+  color: var(--yellow);
+  text-shadow: 4px 4px 0 var(--shadow-purple);
 }
 
 /* ---------- Get-ready countdown ---------- */
@@ -260,7 +287,7 @@ body {
   font-size: 4rem;
   border-radius: 0;
   background: var(--yellow);
-  color: var(--black);
+  color: var(--ink);
   border: 5px solid var(--black);
   box-shadow: 8px 8px 0 var(--black);
 }
@@ -289,8 +316,8 @@ body {
 
 /* ---------- Debug ---------- */
 #debug {
-  background: var(--black);
-  color: #8fffa6;
+  background: #1a0a2e;
+  color: #ffd700;
   font-family: 'Courier New', monospace;
   font-size: 13px;
   padding: 10px 12px;
@@ -298,7 +325,7 @@ body {
 }
 #test-recording-status {
   background: var(--yellow);
-  color: var(--black);
+  color: var(--ink);
   font-family: var(--font-display);
   font-size: 0.75rem;
   padding: 12px 16px;

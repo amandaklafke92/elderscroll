@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <!-- No background fill — transparent so page bg shows through -->
+
+  <!-- ===== BAT SIGNAL (upper-left glow) ===== -->
+  <!-- Yellow circle glow -->
+  <rect x="20" y="10" width="80" height="80" rx="0" fill="none"/>
+  <!-- Circle built from rects (pixel art circle, ~8px radius in art-pixels) -->
+  <rect x="30" y="10" width="60" height="10" fill="#ffd700"/>
+  <rect x="20" y="20" width="80" height="10" fill="#ffd700"/>
+  <rect x="20" y="30" width="80" height="10" fill="#ffd700"/>
+  <rect x="20" y="40" width="80" height="10" fill="#ffd700"/>
+  <rect x="20" y="50" width="80" height="10" fill="#ffd700"/>
+  <rect x="20" y="60" width="80" height="10" fill="#ffd700"/>
+  <rect x="20" y="70" width="80" height="10" fill="#ffd700"/>
+  <rect x="30" y="80" width="60" height="10" fill="#ffd700"/>
+
+  <!-- Bat silhouette cutout (dark, overlaid on signal) -->
+  <!-- Wings -->
+  <rect x="30" y="40" width="10" height="10" fill="#0f0520"/>
+  <rect x="30" y="50" width="10" height="10" fill="#0f0520"/>
+  <rect x="40" y="30" width="10" height="10" fill="#0f0520"/>
+  <rect x="40" y="40" width="10" height="10" fill="#0f0520"/>
+  <rect x="40" y="50" width="10" height="10" fill="#0f0520"/>
+  <rect x="50" y="40" width="10" height="10" fill="#0f0520"/>
+  <rect x="50" y="50" width="10" height="10" fill="#0f0520"/>
+  <rect x="50" y="60" width="10" height="10" fill="#0f0520"/>
+  <rect x="60" y="40" width="10" height="10" fill="#0f0520"/>
+  <rect x="60" y="50" width="10" height="10" fill="#0f0520"/>
+  <rect x="60" y="60" width="10" height="10" fill="#0f0520"/>
+  <rect x="70" y="30" width="10" height="10" fill="#0f0520"/>
+  <rect x="70" y="40" width="10" height="10" fill="#0f0520"/>
+  <rect x="70" y="50" width="10" height="10" fill="#0f0520"/>
+  <rect x="80" y="40" width="10" height="10" fill="#0f0520"/>
+  <rect x="80" y="50" width="10" height="10" fill="#0f0520"/>
+  <!-- Body -->
+  <rect x="50" y="50" width="20" height="20" fill="#0f0520"/>
+
+  <!-- ===== CITY SKYLINE (bottom) ===== -->
+  <!-- Building 1 (left) -->
+  <rect x="0"   y="200" width="40" height="40" fill="#1e0a3c"/>
+  <rect x="10"  y="190" width="20" height="10" fill="#1e0a3c"/>
+  <!-- Windows -->
+  <rect x="10"  y="205" width="10" height="10" fill="#ffd700" opacity="0.5"/>
+  <rect x="25"  y="205" width="10" height="10" fill="#ffd700" opacity="0.3"/>
+
+  <!-- Building 2 (mid-left) -->
+  <rect x="50"  y="210" width="30" height="30" fill="#1e0a3c"/>
+  <rect x="60"  y="200" width="10" height="10" fill="#1e0a3c"/>
+
+  <!-- Building 3 (right) -->
+  <rect x="270" y="195" width="50" height="45" fill="#1e0a3c"/>
+  <rect x="280" y="185" width="30" height="10" fill="#1e0a3c"/>
+  <rect x="285" y="175" width="10" height="10" fill="#1e0a3c"/>
+  <!-- Windows -->
+  <rect x="275" y="200" width="10" height="10" fill="#ffd700" opacity="0.4"/>
+  <rect x="295" y="200" width="10" height="10" fill="#ffd700" opacity="0.6"/>
+  <rect x="275" y="215" width="10" height="10" fill="#ffd700" opacity="0.3"/>
+
+  <!-- ===== CAPE (black, wide swooping wing shape, behind Batman body) ===== -->
+  <!-- Cape spreads left and downward — Batman flying right-to-left -->
+  <!-- Top of cape / upper wing -->
+  <rect x="120" y="60"  width="10" height="10" fill="#1a1a1a"/>
+  <rect x="110" y="70"  width="20" height="10" fill="#1a1a1a"/>
+  <rect x="100" y="80"  width="30" height="10" fill="#1a1a1a"/>
+  <rect x="90"  y="90"  width="40" height="10" fill="#1a1a1a"/>
+  <rect x="80"  y="100" width="50" height="10" fill="#1a1a1a"/>
+  <rect x="80"  y="110" width="60" height="10" fill="#1a1a1a"/>
+  <rect x="90"  y="120" width="60" height="10" fill="#1a1a1a"/>
+  <rect x="100" y="130" width="60" height="10" fill="#1a1a1a"/>
+  <!-- Lower wing trailing edge -->
+  <rect x="110" y="140" width="50" height="10" fill="#1a1a1a"/>
+  <rect x="120" y="150" width="40" height="10" fill="#1a1a1a"/>
+  <rect x="130" y="160" width="30" height="10" fill="#1a1a1a"/>
+  <rect x="140" y="170" width="20" height="10" fill="#1a1a1a"/>
+  <rect x="150" y="180" width="10" height="10" fill="#1a1a1a"/>
+
+  <!-- ===== BATMAN BODY ===== -->
+  <!-- Cowl ears (two pointed rects above head) -->
+  <rect x="200" y="50" width="10" height="20" fill="#1a1a1a"/>
+  <rect x="220" y="50" width="10" height="20" fill="#1a1a1a"/>
+
+  <!-- Head -->
+  <rect x="195" y="70" width="40" height="30" fill="#1a1a1a"/>
+  <!-- Eye whites (tiny) -->
+  <rect x="200" y="78" width="10" height="6"  fill="#ffd700"/>
+  <rect x="218" y="78" width="10" height="6"  fill="#ffd700"/>
+
+  <!-- Neck -->
+  <rect x="205" y="100" width="20" height="10" fill="#1a1a1a"/>
+
+  <!-- Torso -->
+  <rect x="190" y="110" width="50" height="40" fill="#1a1a1a"/>
+
+  <!-- Bat symbol on chest (yellow chevron) -->
+  <rect x="205" y="118" width="20" height="6"  fill="#ffd700"/>
+  <rect x="200" y="124" width="10" height="6"  fill="#ffd700"/>
+  <rect x="220" y="124" width="10" height="6"  fill="#ffd700"/>
+
+  <!-- Belt (yellow) -->
+  <rect x="190" y="148" width="50" height="8"  fill="#ffd700"/>
+
+  <!-- Left arm (extended left, holding grandma) -->
+  <rect x="150" y="110" width="40" height="10" fill="#1a1a1a"/>
+  <rect x="140" y="120" width="10" height="10" fill="#1a1a1a"/>
+  <!-- Left hand / grip -->
+  <rect x="130" y="128" width="15" height="8"  fill="#1a1a1a"/>
+
+  <!-- Right arm (tucked, trailing) -->
+  <rect x="240" y="115" width="20" height="10" fill="#1a1a1a"/>
+  <rect x="255" y="125" width="10" height="10" fill="#1a1a1a"/>
+
+  <!-- Legs (trailing down-right under cape) -->
+  <rect x="195" y="150" width="20" height="20" fill="#1a1a1a"/>
+  <rect x="220" y="150" width="20" height="20" fill="#1a1a1a"/>
+  <!-- Boots -->
+  <rect x="193" y="168" width="24" height="12" fill="#1a1a1a"/>
+  <rect x="218" y="168" width="24" height="12" fill="#1a1a1a"/>
+
+  <!-- ===== GRANDMA (cradled in Batman's left arm, positioned left of body) ===== -->
+  <!-- Hair bun -->
+  <rect x="82"  y="108" width="20" height="10" fill="#d0d0d0"/>
+  <rect x="86"  y="100" width="12" height="10" fill="#d0d0d0"/>
+
+  <!-- Head -->
+  <rect x="80"  y="118" width="24" height="20" fill="#f5c5a3"/>
+  <!-- Eyes (tiny dots) -->
+  <rect x="85"  y="124" width="4"  height="4"  fill="#5a4030"/>
+  <rect x="95"  y="124" width="4"  height="4"  fill="#5a4030"/>
+  <!-- Smile -->
+  <rect x="86"  y="132" width="12" height="3"  fill="#c07050"/>
+
+  <!-- Body / dress -->
+  <rect x="76"  y="138" width="32" height="30" fill="#9980c0"/>
+  <!-- Dress detail (lighter stripe) -->
+  <rect x="80"  y="145" width="24" height="4"  fill="#b09ad0"/>
+
+  <!-- Left arm dangling -->
+  <rect x="70"  y="140" width="8"  height="20" fill="#9980c0"/>
+  <rect x="66"  y="158" width="10" height="6"  fill="#f5c5a3"/>
+
+  <!-- Right arm (tucked into Batman's grip) -->
+  <rect x="108" y="140" width="8"  height="14" fill="#9980c0"/>
+
+  <!-- Handbag hanging off left arm -->
+  <rect x="58"  y="160" width="14" height="12" fill="#a06030"/>
+  <rect x="60"  y="158" width="10" height="4"  fill="#804820"/>
+  <!-- Bag clasp -->
+  <rect x="63"  y="162" width="4"  height="4"  fill="#ffd700"/>
+
+  <!-- Feet / shoes -->
+  <rect x="78"  y="168" width="10" height="8"  fill="#404040"/>
+  <rect x="95"  y="168" width="10" height="8"  fill="#404040"/>
+
+  <!-- ===== MOTION LINES (speed lines, behind Batman) ===== -->
+  <rect x="255" y="95"  width="30" height="4"  fill="#c4a200" opacity="0.6"/>
+  <rect x="260" y="105" width="40" height="4"  fill="#c4a200" opacity="0.4"/>
+  <rect x="265" y="115" width="25" height="4"  fill="#c4a200" opacity="0.5"/>
+  <rect x="258" y="125" width="35" height="4"  fill="#c4a200" opacity="0.3"/>
+
+</svg>
