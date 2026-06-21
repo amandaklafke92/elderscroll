@@ -25,9 +25,9 @@ recording stays secret until then.
 ### Gesture map (current set)
 - click = **cross-body tap** (one hand touches the opposite shoulder)
 - move / next = **push forward** (both arms thrust forward from the chest)
-- zoom in = **reach up** (one arm extends straight overhead)
+- zoom in = **sequential reach up** (one arm straight overhead, THEN the other — not both at once)
 - zoom out = **open out** (both arms expand from chest to wide)
-- take a photo = **torso rotate** (turn shoulders to one side around the vertical axis)
+- take a photo = **T-pose** (both arms held straight out to the sides at shoulder height, body in a cross)
 
 ### The flow (new direction)
 1. Per gesture: tutorial (cover-story phrasing) → **practice 1** (throwaway) →

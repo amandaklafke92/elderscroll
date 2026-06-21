@@ -34,22 +34,30 @@ const CONFIG = {
      shoulder height.  More negative = arms must be pushed further out. */
   pushForwardZ:    -0.40,
 
-  /* Zoom In = one arm straight up. A wrist must rise above the nose by
-     at least this much (normalized image y units). Larger = the hand
-     must be clearly above the head, not just nose-height. */
-  reachUpMargin:   0.20,
+  /* Zoom In = BOTH arms straight up. Each wrist must rise above the
+     nose by at least this much (normalized image y units) OR go off
+     the top of the camera frame. Lower = easier to register, but more
+     likely to fire on a partial raise. Wrists that exit the frame are
+     always counted as "up" so a full extension does not get penalised
+     by MediaPipe losing them at the top edge. */
+  reachUpMargin:   0.03,
 
   /* Zoom Out = hands together at chest → arms wide. Detector arms when
      wrists are close (< near × shoulderWidth) at chest level, fires
      when they later spread past (> far × shoulderWidth).
      Tighter near + larger far = the opening must be more pronounced. */
-  openOutNearRatio: 0.50,
-  openOutFarRatio:  3.1,
+  openOutNearRatio: 0.70,
+  openOutFarRatio:  2.2,
 
-  /* Take a Photo = torso rotation. When current shoulder width falls
-     below this fraction of the rolling-baseline (facing-forward) width,
-     the user is considered rotated. Lower = needs a fuller turn. */
-  rotateRatio:     0.42,
+  /* Take a Photo = T-pose ("cristo"): both arms extended laterally at
+     shoulder height.
+     - tPoseHeightTol: max |wrist.y - shoulder.y| (image y units). Lower
+       = stricter requirement that the arms are truly horizontal.
+     - tPoseWidthRatio: min (wrist-to-wrist span / shoulder width). At
+       rest with arms down this is ~0.5; with arms fully out it climbs
+       to 2.5–3+. Higher = arms must be fully extended out. */
+  tPoseHeightTol:  0.15,
+  tPoseWidthRatio: 2.0,
 
   /* Number of consecutive frames a detector must see its "fire" condition
      before triggering. Higher = the user must hold the pose briefly,
@@ -68,7 +76,7 @@ const CONFIG = {
   confettiMs:    3000,   // success-screen confetti duration
   helpDelayMs:   12000,  // show the "it's not working..." hint after this long
   failureMs:     20000,  // time without detection on a practice screen → failure feedback
-  failureShowMs: 2500,   // how long the failure feedback stays before retry
+  failureShowMs: 5500,   // how long the failure feedback stays before retry
 
   getReadyMs: 3000,
   giftMs:     3500,

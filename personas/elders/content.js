@@ -41,7 +41,7 @@ const CONTENT = {
       video: 'Videos/clic.mp4',
       gestureKey: 'crossTap',
       gestureLabel: 'Tap opposite shoulder',
-      instruction: 'Tap your opposite shoulder with one hand.',
+      instruction: 'Tap your <strong>opposite shoulder</strong> with one hand.',
       showNextButton: true,
     },
     {
@@ -50,15 +50,15 @@ const CONTENT = {
       video: 'Videos/swipe.mp4',
       gestureKey: 'pushForward',
       gestureLabel: 'Push both arms forward',
-      instruction: 'Push both arms forward, like a gentle swipe.',
+      instruction: 'Push <strong>both arms forward</strong>, like a gentle swipe.',
     },
     {
       id: 'zoom-in',
       name: 'Zoom In',
       video: 'Videos/zoom in.mp4',
       gestureKey: 'reachUp',
-      gestureLabel: 'Reach one arm up overhead',
-      instruction: 'Raise one arm straight up above your head.',
+      gestureLabel: 'Reach one arm up, then the other',
+      instruction: 'Raise <strong>one arm</strong> above your head, then raise <strong>the other</strong>.',
     },
     {
       id: 'zoom-out',
@@ -66,15 +66,15 @@ const CONTENT = {
       video: 'Videos/zoom out.mp4',
       gestureKey: 'openOut',
       gestureLabel: 'Open both arms out wide',
-      instruction: 'Start with your hands at your chest, then open both arms out wide.',
+      instruction: 'Start with your hands at your chest, then <strong>open both arms out wide</strong>.',
     },
     {
       id: 'take-photo',
       name: 'Take a Photo',
       video: 'Videos/takeaphoto.mp4',
-      gestureKey: 'rotate',
-      gestureLabel: 'Turn your shoulders to one side',
-      instruction: 'Turn your shoulders to one side, as if pointing at something.',
+      gestureKey: 'tPose',
+      gestureLabel: 'Open both arms out to the sides (T-pose)',
+      instruction: 'Stretch <strong>both arms straight out to the sides</strong>, like a cross.',
     },
   ],
 
@@ -101,10 +101,9 @@ const CONTENT = {
     downloadButton: 'Download your video',
   },
 
-  /* Shown after a while with no success on a practice screen. */
-  helpText:
-    "It's not working… try this… Sit so your head and shoulders fill the camera, " +
-    "then make your movement bigger and hold still for a moment afterwards.",
+  /* Shown after a while with no success on a practice screen. Kept short
+     and direct — two simple instructions, no preamble. */
+  helpText: 'Hands and head visible. Move bigger.',
 
   /* Failure feedback. */
   failureText: "Hmm, I didn't catch that. Let's try once more.",

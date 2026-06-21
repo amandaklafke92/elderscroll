@@ -177,6 +177,13 @@ body {
   box-shadow: 6px 6px 0 var(--black);
   padding: 14px 26px;
 }
+/* Key gesture words inside the instruction get a pixel-art highlight. */
+.instruction strong {
+  background: var(--yellow);
+  color: var(--black);
+  padding: 0 0.25em;
+  font-weight: normal;        /* the body font is VT323 — boldness comes from the highlight, not the weight */
+}
 .practice-btn {
   font-family: var(--font-display);
   padding: 22px 30px;
