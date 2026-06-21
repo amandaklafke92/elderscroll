@@ -93,6 +93,7 @@ const CONTENT = {
   p1SuccessText: 'Nice!',
   successText: 'Well done!',
   completeText: "You're all set!",
+  giftText: "Here's a little gift for all your hard work!",
 
   reveal: {
     rendering: 'Making your video…',

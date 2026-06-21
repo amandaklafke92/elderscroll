@@ -70,11 +70,8 @@ const CONFIG = {
   failureMs:     20000,  // time without detection on a practice screen → failure feedback
   failureShowMs: 2500,   // how long the failure feedback stays before retry
 
-  /* Recording window for Practice 2.  Get-ready countdown gives the
-     "3 seconds BEFORE Practice 2 appears" portion of the clip; the
-     post-capture window gives the "3 seconds AFTER the gesture" portion. */
-  getReadyMs:     3000,
-  postCaptureMs:  3000,
+  getReadyMs: 3000,
+  giftMs:     3500,
 
   /* Final reel + Lovable handoff. The passcode remains in the local helper,
      never in browser-delivered code. */

@@ -42,8 +42,9 @@ modules require localhost.
 3. Complete five lessons: Click, Move, Zoom In, Zoom Out, and Take a Photo.
 4. Each lesson runs tutorial → Practice 1 → Practice 2.
 5. Practice 2 is recorded silently.
-6. After the final lesson, the clips render in lesson order.
-7. A local copy downloads and the Lovable download link appears.
+6. After the final lesson, a short gift message appears.
+7. The clips render in lesson order and automatically play.
+8. A local copy downloads and the Lovable download link appears.
 
 ## Presenter controls
 

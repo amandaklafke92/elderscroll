@@ -35,7 +35,7 @@ const HELP_DELAY_MS    = CONFIG.helpDelayMs;
 const FAILURE_MS       = CONFIG.failureMs;
 const FAILURE_SHOW_MS  = CONFIG.failureShowMs;
 const GET_READY_MS     = CONFIG.getReadyMs;
-const POST_CAPTURE_MS  = CONFIG.postCaptureMs;
+const GIFT_MS          = CONFIG.giftMs;
 
 /* ---------- MediaPipe CDN locations (verified reachable) ---------- */
 const MP_BUNDLE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
@@ -337,7 +337,7 @@ function goState(state) {
     case 'lesson-countdown-p1':
       // Plain countdown before "Your first turn" — no recording yet.
       showScreen('getready');
-      runCountdown(/* withRecording */ false, () => goState('lesson-practice1'));
+      runCountdown(() => goState('lesson-practice1'));
       break;
     case 'lesson-practice1':
       showScreen('practice');
@@ -346,12 +346,8 @@ function goState(state) {
         () => goState('lesson-p1-failure'));
       break;
     case 'lesson-p1-success':
-      // Confetti is the visible reward AND the silent 3s recording lead-in
-      // for Practice 2.  Recording starts here so the clip includes the
-      // 3 seconds BEFORE "Your second turn" appears.
       el('#success-msg').textContent = CONTENT.p1SuccessText || CONTENT.successText;
       showScreen('success');
-      beginPractice2Recording();
       runConfetti(() => goState('lesson-practice2'));
       break;
     case 'lesson-p1-failure':
@@ -361,37 +357,32 @@ function goState(state) {
       break;
     case 'lesson-practice2':
       showScreen('practice');
+      beginPractice2Recording('auto');
       setupPractice(currentLesson, /* turn */ 2,
         () => goState('lesson-p2-success'),
         () => goState('lesson-p2-failure'));
       break;
     case 'lesson-p2-success':
-      // The recorder keeps running in the background for POST_CAPTURE_MS
-      // after the gesture (scheduled in setupPractice); the clip is saved
-      // when that timer fires.  Confetti rolls in parallel.
       el('#success-msg').textContent = CONTENT.successText;
       showScreen('success');
-      runConfetti(() => startLesson(lessonIdx + 1));
+      runConfetti(async () => {
+        await finishCurrentLessonRecording();
+        startLesson(lessonIdx + 1);
+      });
       break;
     case 'lesson-p2-failure':
       // Recording already aborted in setupPractice's failure timer.
-      // Show recommendation, then countdown (which starts a fresh
-      // 3s recording lead-in) before retrying Practice 2.
+      // Show recommendation, then retry Practice 2 with a fresh recording.
       showScreen('failure');
       runFailure(() => goState('lesson-countdown-p2'));
       break;
     case 'lesson-countdown-p2':
-      // Countdown before a Practice 2 retry — also opens a fresh recording.
       showScreen('getready');
-      runCountdown(/* withRecording */ true, () => goState('lesson-practice2'));
+      runCountdown(() => goState('lesson-practice2'));
       break;
     case 'all-complete':
-      el('#success-msg').textContent = CONTENT.completeText;
-      showScreen('success');
-      runConfetti(async () => {
-        await waitForPendingRecordings();
-        playReel();
-      });
+      showScreen('gift');
+      runGiftScreen(() => playReel());
       break;
   }
 }
@@ -495,17 +486,11 @@ function runTutorial(lesson, onDone) {
 }
 
 /* =====================================================================
-   5. COUNTDOWN — 3..2..1 transition screen used in two places:
-        - before "Your first turn" (no recording)
-        - before retrying "Your second turn" after a failure
-          (with `withRecording`, opens a fresh recording window so the
-           clip still captures the 3s BEFORE Practice 2 reappears)
+   5. COUNTDOWN — 3..2..1 transition before each practice attempt.
    ===================================================================== */
-function runCountdown(withRecording, onDone) {
+function runCountdown(onDone) {
   el('#getready-text').textContent = CONTENT.getReadyPrompt || 'Get ready…';
   const countEl = el('#getready-count');
-
-  if (withRecording) beginPractice2Recording();
 
   let remaining = Math.max(1, Math.round(GET_READY_MS / 1000));
   countEl.textContent = remaining;
@@ -564,35 +549,19 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
 
   helpTimer = setTimeout(showHelp, HELP_DELAY_MS);
 
-  const succeed = (skipPostCapture = false) => {
+  const succeed = () => {
     activeGestureHandler = null;
     currentSkipAction = null;
     clearTimeout(failureTimer);
     clearTimeout(helpTimer);
-
-    if (isRecorded) {
-      const finishRecording = async () => {
-        await endPractice2Recording(lesson);
-      };
-      if (skipPostCapture) {
-        trackPendingRecording(finishRecording());
-      } else {
-        trackPendingRecording(new Promise((resolve) => {
-          setTimeout(async () => {
-            await finishRecording();
-            resolve();
-          }, POST_CAPTURE_MS);
-        }));
-      }
-    }
     onSuccess();
   };
 
   activeGestureHandler = (g) => {
     if (g !== lesson.gestureKey) return;
-    succeed(false);
+    succeed();
   };
-  currentSkipAction = () => succeed(true);
+  currentSkipAction = succeed;
 }
 
 function showHelp() {
@@ -673,7 +642,24 @@ function runConfetti(onDone) {
 }
 
 /* =====================================================================
-   9. RECORDING — MediaRecorder for the silent Practice 2 clip, plus
+   9. GIFT — brief payoff message before the stitched reel appears.
+   ===================================================================== */
+function runGiftScreen(onDone) {
+  el('#gift-text').textContent = CONTENT.giftText;
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    currentSkipAction = null;
+    onDone();
+  };
+  const timer = setTimeout(finish, GIFT_MS);
+  currentSkipAction = finish;
+}
+
+/* =====================================================================
+   10. RECORDING — MediaRecorder for the silent Practice 2 clip, plus
                   IndexedDB persistence.  Clip merging/exporting is out
                   of scope; clips are stored for a future pass.
    ===================================================================== */
@@ -726,6 +712,7 @@ async function saveClip({ blob, lessonId, lessonName, gestureLabel }) {
 
 let mediaRecorder = null;
 let recordingChunks = [];
+let recordingMode = null;
 let recordedClips = [];
 const pendingRecordings = new Set();
 
@@ -738,15 +725,24 @@ async function waitForPendingRecordings() {
   await Promise.all([...pendingRecordings]);
 }
 
-function beginPractice2Recording() {
+async function finishCurrentLessonRecording() {
+  if (!currentLesson) return;
+  const pending = endPractice2Recording(currentLesson);
+  trackPendingRecording(pending);
+  await pending;
+}
+
+function beginPractice2Recording(mode = 'auto') {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     console.warn('[ElderScroll] recording already in progress');
     return false;
   }
   recordingChunks = [];
+  recordingMode = mode;
   const stream = camera && camera.srcObject;
   if (!stream || typeof MediaRecorder === 'undefined') {
     mediaRecorder = null;
+    recordingMode = null;
     console.warn('[ElderScroll] recording unavailable: camera stream or MediaRecorder missing');
     return false;
   }
@@ -759,10 +755,14 @@ function beginPractice2Recording() {
     };
     mediaRecorder.start();
     console.log('[ElderScroll] recording started');
+    if (mode === 'auto') {
+      setTestRecordingStatus('● AUTO RECORDING — PRACTICE 2', true);
+    }
     return true;
   } catch (err) {
     console.error('[ElderScroll] MediaRecorder failed to start', err);
     mediaRecorder = null;
+    recordingMode = null;
     recordingChunks = [];
     return false;
   }
@@ -780,6 +780,8 @@ function endPractice2Recording(lesson) {
       const blob = new Blob(recordingChunks, { type: mime });
       recordingChunks = [];
       mediaRecorder = null;
+      const completedMode = recordingMode;
+      recordingMode = null;
       if (blob.size > 0) {
         recordedClips.push({
           lessonId: lesson.id,
@@ -792,6 +794,11 @@ function endPractice2Recording(lesson) {
           `[ElderScroll] recording saved: ${lesson.lessonName || lesson.name} · ` +
           `${Math.round(blob.size / 1024)} KB · ${recordedClips.length} clip(s)`
         );
+        if (completedMode === 'auto') {
+          setTestRecordingStatus(
+            `AUTO CLIP SAVED — ${recordedClips.length} CLIP(S)`
+          );
+        }
       }
       await saveClip({
         blob,
@@ -806,6 +813,7 @@ function endPractice2Recording(lesson) {
     } catch (err) {
       console.error('[ElderScroll] MediaRecorder stop failed', err);
       mediaRecorder = null;
+      recordingMode = null;
       recordingChunks = [];
       resolve();
     }
@@ -817,11 +825,18 @@ function abortPractice2Recording() {
     mediaRecorder.onstop = () => {
       recordingChunks = [];
       mediaRecorder = null;
+      recordingMode = null;
     };
-    try { mediaRecorder.stop(); } catch (_) { mediaRecorder = null; }
+    try {
+      mediaRecorder.stop();
+    } catch (_) {
+      mediaRecorder = null;
+      recordingMode = null;
+    }
   } else {
     recordingChunks = [];
     mediaRecorder = null;
+    recordingMode = null;
   }
 }
 
@@ -840,13 +855,13 @@ function recordTestClip() {
     return;
   }
 
-  const testLesson = currentLesson || {
+  const testLesson = {
     id: `test-${Date.now()}`,
     name: 'Test clip',
     gestureLabel: 'Presenter test recording',
-    order: recordedClips.length,
+    order: CONTENT.lessons.length + recordedClips.length,
   };
-  if (!beginPractice2Recording()) {
+  if (!beginPractice2Recording('manual')) {
     setTestRecordingStatus('TEST RECORDING COULD NOT START');
     return;
   }
@@ -876,7 +891,7 @@ async function previewRecordedClips() {
 }
 
 /* =====================================================================
-   10. REEL — combine Practice 2 clips, reveal, download, and upload
+   11. REEL — combine Practice 2 clips, reveal, download, and upload
    ===================================================================== */
 const REC_W = 854;
 const REC_H = 480;
@@ -1019,7 +1034,7 @@ function playReel() {
   source.onloadedmetadata = () => {
     const duration = Number.isFinite(source.duration) && source.duration > 0
       ? source.duration
-      : (GET_READY_MS + POST_CAPTURE_MS) / 1000;
+      : 8;
     clearTimeout(watchdog);
     watchdog = setTimeout(advance, duration * 1000 + 1000);
   };
@@ -1094,7 +1109,7 @@ function setUploadUi(message, shareUrl) {
 }
 
 /* =====================================================================
-   11. PRESENTER KEYS + DEBUG (fallback so a demo never stalls)
+   12. PRESENTER KEYS + DEBUG (fallback so a demo never stalls)
    ===================================================================== */
 function setupPresenterKeys() {
   document.addEventListener('keydown', (e) => {
