@@ -189,6 +189,20 @@ body {
   box-shadow: 3px 3px 0 var(--ink);
 }
 
+/* ---------- Video size (~50% bigger than the engine default) ---------- */
+.video-frame {
+  width: min(92vw, 1350px);
+  height: min(82vh, 810px);
+}
+
+/* ---------- Intro video captions (WebVTT) ---------- */
+#intro-video::cue {
+  background: rgba(15, 5, 32, 0.85);
+  color: var(--yellow);
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 2em;
+}
+
 /* ---------- Render loader (reveal: finalising + uploading the reel) ---------- */
 .render-loader {
   display: flex;
