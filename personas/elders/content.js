@@ -22,14 +22,14 @@ const CONTENT = {
 
   /* Intro screen plays this video once after the user presses Start. */
   intro: {
-    video: 'Videos/intro.mp4',
+    video: 'assets/tutorials/00-intro.mp4',
   },
 
   /* Lesson manifest.
      Required fields:
        - id              stable identifier (used in stored clip metadata)
        - name            human label shown on the tutorial screen + metadata
-       - video           tutorial clip in /Videos (filenames are the truth)
+       - video           tutorial clip in /assets/tutorials (filenames are the truth)
        - gestureKey      detector the engine exposes (crossTap | pushForward
                          | reachUp | openOut | tPose)
        - gestureLabel    short label stored with the recorded clip
@@ -63,7 +63,7 @@ const CONTENT = {
     {
       id: 'click',
       name: 'Click',
-      video: 'Videos/clic.mp4',
+      video: 'assets/tutorials/01-clic.mp4',
       gestureKey: 'crossTap',
       gestureLabel: 'Tap opposite shoulder',
       instruction: 'Tap your <strong>opposite shoulder</strong> with one hand.',
@@ -72,7 +72,7 @@ const CONTENT = {
     {
       id: 'move',
       name: 'Move',
-      video: 'Videos/swipe.mp4',
+      video: 'assets/tutorials/02swipe.mp4',
       gestureKey: 'pushForward',
       gestureLabel: 'Push both arms forward',
       instruction: 'Push <strong>both arms forward</strong>, like a gentle swipe.',
@@ -83,7 +83,7 @@ const CONTENT = {
     {
       id: 'zoom-in',
       name: 'Zoom In',
-      video: 'Videos/zoom in.mp4',
+      video: 'assets/tutorials/03-zoom in.mp4',
       gestureKey: 'reachUp',
       gestureLabel: 'Reach one arm up, then the other',
       instruction: 'Raise <strong>one arm</strong> above your head, then raise <strong>the other</strong>.',
@@ -92,7 +92,7 @@ const CONTENT = {
     {
       id: 'zoom-out',
       name: 'Zoom Out',
-      video: 'Videos/zoom out.mp4',
+      video: 'assets/tutorials/04-zoom out.mp4',
       gestureKey: 'openOut',
       gestureLabel: 'Open both arms out wide',
       instruction: 'Start with your hands at your chest, then <strong>open both arms out wide</strong>.',
@@ -102,7 +102,7 @@ const CONTENT = {
     {
       id: 'take-photo',
       name: 'Take a Photo',
-      video: 'Videos/takeaphoto.mp4',
+      video: 'assets/tutorials/05-takeaphoto.mp4',
       gestureKey: 'tPose',
       gestureLabel: 'Open both arms out to the sides (T-pose)',
       instruction: 'Stretch <strong>both arms straight out to the sides</strong>, like a cross.',

@@ -12,12 +12,14 @@
 *.log
 
 # Large local-only media (share via Drive/Dropbox, not git).
-# Exception: tutorial videos under Videos/ are tracked so teammates
-# get the canonical set when they pull, without a separate sync step.
+# Exception: tutorial videos are tracked so teammates get the canonical
+# set when they pull, without a separate sync step.
 *.mp4
 *.MP4
 !Videos/*.mp4
 !Videos/*.MP4
+!assets/tutorials/*.mp4
+!assets/tutorials/*.MP4
 
 # Local scratch notes (not part of the product)
 backlog.md
