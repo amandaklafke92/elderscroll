@@ -22,12 +22,12 @@ recording stays secret until then.
 > to real elderly people. **We build one version only: the elderly one.** (An earlier
 > plan to ship multiple persona versions has been dropped.)
 
-### Gesture map (the new set)
-- click = **clap**
-- move / next = **swipe** ("lawnmower pull")
-- zoom in = **punch the air**
-- zoom out = **"stop"**
-- take a photo = **spin**
+### Gesture map (current set)
+- click = **cross-body tap** (one hand touches the opposite shoulder)
+- move / next = **push forward** (both arms thrust forward from the chest)
+- zoom in = **reach up** (one arm extends straight overhead)
+- zoom out = **open out** (both arms expand from chest to wide)
+- take a photo = **torso rotate** (turn shoulders to one side around the vertical axis)
 
 ### The flow (new direction)
 1. Per gesture: tutorial (cover-story phrasing) → **practice 1** (throwaway) →
@@ -41,10 +41,12 @@ recording stays secret until then.
    and the result is revealed side-by-side with the original.
 
 ### Status — built vs. to build
-The engine currently detects **clap + lean** and runs the *original* onboarding flow
-(tutorial → practice → success → lesson library). The pivot still needs: the expanded
-gesture set, the practice-1/practice-2 split with countdown, removal of the library /
-auto-advance, **in-browser recording**, **stitching**, the **reveal screen**, and
+The engine now detects the full gesture set above and runs the sequential auto-advance
+flow: intro → for each lesson (tutorial → 3-2-1 countdown → practice 1 with feedback →
+practice 2, silently recorded → success) → completion screen. Practice-2 clips are
+saved to IndexedDB (`elderscroll/clips`) with `lessonId / lessonName / gestureLabel /
+timestamp / clipReference`. Legacy clap + lean detectors remain in the engine but no
+current lesson uses them. Still to do: **stitching**, the **reveal screen**, and
 (stretch) the **background swap**.
 
 ### Who owns what (hackathon)
