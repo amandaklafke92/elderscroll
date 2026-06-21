@@ -57,7 +57,7 @@ back to the real camera background if segmentation is unavailable.
 - **Joumana** — camera placement + ideal real-world background; (stretch) background-
   image swap in edit; music (shared with Camilla).
 
-Full plan with the *why* per task: `action-plan_elderscroll-2026-06-20.md`.
+Full plan with the *why* per task: `docs/action-plan_elderscroll-2026-06-20.md`.
 
 ---
 
