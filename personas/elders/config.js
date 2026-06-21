@@ -40,14 +40,14 @@ const CONFIG = {
      likely to fire on a partial raise. Wrists that exit the frame are
      always counted as "up" so a full extension does not get penalised
      by MediaPipe losing them at the top edge. */
-  reachUpMargin:   0.08,
+  reachUpMargin:   0.03,
 
   /* Zoom Out = hands together at chest → arms wide. Detector arms when
      wrists are close (< near × shoulderWidth) at chest level, fires
      when they later spread past (> far × shoulderWidth).
      Tighter near + larger far = the opening must be more pronounced. */
-  openOutNearRatio: 0.50,
-  openOutFarRatio:  3.1,
+  openOutNearRatio: 0.70,
+  openOutFarRatio:  2.2,
 
   /* Take a Photo = T-pose ("cristo"): both arms extended laterally at
      shoulder height.
@@ -56,8 +56,8 @@ const CONFIG = {
      - tPoseWidthRatio: min (wrist-to-wrist span / shoulder width). At
        rest with arms down this is ~0.5; with arms fully out it climbs
        to 2.5–3+. Higher = arms must be fully extended out. */
-  tPoseHeightTol:  0.10,
-  tPoseWidthRatio: 2.4,
+  tPoseHeightTol:  0.15,
+  tPoseWidthRatio: 2.0,
 
   /* Number of consecutive frames a detector must see its "fire" condition
      before triggering. Higher = the user must hold the pose briefly,

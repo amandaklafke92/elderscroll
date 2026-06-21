@@ -259,7 +259,10 @@ function detectReachUp(lm) {
   if (reachUpFirstSide === null) {
     if (lwUp && !rwUp) reachUpFirstSide = 'L';
     else if (rwUp && !lwUp) reachUpFirstSide = 'R';
-    // both up simultaneously, or neither up — do nothing; wait for a real "one only".
+    else if (lwUp && rwUp) reachUpFirstSide = lw.y <= rw.y ? 'L' : 'R';
+    // if both up in the same frame we still arm — assume the higher wrist
+    // got there first.  This catches users who lift quickly enough that
+    // the two arms become "up" within a single detection frame.
   }
   const fire =
     (reachUpFirstSide === 'L' && rwUp) ||
