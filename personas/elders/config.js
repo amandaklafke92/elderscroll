@@ -78,4 +78,16 @@ const CONFIG = {
   uploadEndpoint: 'http://localhost:8787/upload',
   videoLibraryUrl: 'https://claude-vid-spot.lovable.app',
   recordBackground: 'assets/background-beat-it.jpeg',
+
+  /* Final 16-second reveal. Times are the matching timestamps in the
+     source track; the renderer divides each window evenly by `repeat`
+     and replays the participant's matching Practice 2 movement. */
+  reelMusic: 'assets/music_Michael-Jackson_Beat-It.mp3',
+  reelSequence: [
+    { lessonId: 'click',      repeat: 8, start: 3 * 60 + 30, end: 3 * 60 + 33 },
+    { lessonId: 'zoom-in',    repeat: 2, start: 3 * 60 + 33, end: 3 * 60 + 35 },
+    { lessonId: 'move',       repeat: 2, start: 3 * 60 + 35, end: 3 * 60 + 36 },
+    { lessonId: 'take-photo', repeat: 1, start: 3 * 60 + 36, end: 3 * 60 + 40 },
+    { lessonId: 'zoom-out',   repeat: 2, start: 3 * 60 + 40, end: 3 * 60 + 46 },
+  ],
 };

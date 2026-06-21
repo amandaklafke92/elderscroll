@@ -67,6 +67,8 @@ let currentLesson = null;
 
 const UPLOAD_ENDPOINT = CONFIG.uploadEndpoint;
 const VIDEO_LIBRARY_URL = CONFIG.videoLibraryUrl;
+const REEL_SEQUENCE = CONFIG.reelSequence || [];
+const REEL_MUSIC_URL = CONFIG.reelMusic || '';
 
 /* =====================================================================
    1. STARTUP — camera + MediaPipe, triggered by the Start button
@@ -84,6 +86,7 @@ window.addEventListener('DOMContentLoaded', () => {
 async function start() {
   const status = el('#start-status');
   try {
+    preloadReelMusic();
     status.textContent = 'Starting camera…';
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { width: 1280, height: 720 }, audio: false
@@ -385,6 +388,10 @@ function goState(state) {
       break;
     case 'all-complete':
       showScreen('gift');
+      // Use the gift screen to prepare the local clips and music so the
+      // reveal can begin immediately when this screen finishes.
+      prepareRecordedClips();
+      preloadReelMusic();
       runGiftScreen(() => playReel());
       break;
   }
@@ -568,6 +575,7 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
     currentSkipAction = null;
     clearTimeout(failureTimer);
     clearTimeout(helpTimer);
+    if (isRecorded) markRecordingGesture();
     onSuccess();
   };
 
@@ -708,7 +716,13 @@ function openClipsDB() {
   });
 }
 
-async function saveClip({ blob, lessonId, lessonName, gestureLabel }) {
+async function saveClip({
+  blob,
+  lessonId,
+  lessonName,
+  gestureLabel,
+  gestureOffset,
+}) {
   try {
     const db = await openClipsDB();
     return await new Promise((resolve, reject) => {
@@ -721,6 +735,7 @@ async function saveClip({ blob, lessonId, lessonName, gestureLabel }) {
         timestamp: new Date().toISOString(),
         mimeType: blob.type,
         size: blob.size,
+        gestureOffset,
         blob,
       };
       const req = store.add(record);
@@ -743,6 +758,8 @@ async function saveClip({ blob, lessonId, lessonName, gestureLabel }) {
 let mediaRecorder = null;
 let recordingChunks = [];
 let recordingMode = null;
+let recordingStartedAt = null;
+let recordingGestureOffset = null;
 let recordedClips = [];
 const pendingRecordings = new Set();
 
@@ -769,6 +786,8 @@ function beginPractice2Recording(mode = 'auto') {
   }
   recordingChunks = [];
   recordingMode = mode;
+  recordingStartedAt = null;
+  recordingGestureOffset = null;
   const stream = camera && camera.srcObject;
   if (!stream || typeof MediaRecorder === 'undefined') {
     mediaRecorder = null;
@@ -784,6 +803,7 @@ function beginPractice2Recording(mode = 'auto') {
       if (e.data && e.data.size > 0) recordingChunks.push(e.data);
     };
     mediaRecorder.start();
+    recordingStartedAt = performance.now();
     console.log('[ElderScroll] recording started');
     if (mode === 'auto') {
       setTestRecordingStatus('● AUTO RECORDING — PRACTICE 2', true);
@@ -796,6 +816,17 @@ function beginPractice2Recording(mode = 'auto') {
     recordingChunks = [];
     return false;
   }
+}
+
+function markRecordingGesture() {
+  if (!recordingStartedAt || recordingGestureOffset !== null) return;
+  recordingGestureOffset = Math.max(
+    0,
+    (performance.now() - recordingStartedAt) / 1000
+  );
+  console.log(
+    `[ElderScroll] gesture captured at ${recordingGestureOffset.toFixed(2)}s`
+  );
 }
 
 function endPractice2Recording(lesson) {
@@ -811,7 +842,10 @@ function endPractice2Recording(lesson) {
       recordingChunks = [];
       mediaRecorder = null;
       const completedMode = recordingMode;
+      const gestureOffset = recordingGestureOffset;
       recordingMode = null;
+      recordingStartedAt = null;
+      recordingGestureOffset = null;
       if (blob.size > 0) {
         recordedClips.push({
           lessonId: lesson.id,
@@ -819,6 +853,7 @@ function endPractice2Recording(lesson) {
           order: lesson.order ?? CONTENT.lessons.findIndex(item => item.id === lesson.id),
           blob,
           url: URL.createObjectURL(blob),
+          gestureOffset,
         });
         console.log(
           `[ElderScroll] recording saved: ${lesson.lessonName || lesson.name} · ` +
@@ -835,6 +870,7 @@ function endPractice2Recording(lesson) {
         lessonId: lesson.id,
         lessonName: lesson.name,
         gestureLabel: lesson.gestureLabel,
+        gestureOffset,
       });
       resolve();
     };
@@ -844,6 +880,8 @@ function endPractice2Recording(lesson) {
       console.error('[ElderScroll] MediaRecorder stop failed', err);
       mediaRecorder = null;
       recordingMode = null;
+      recordingStartedAt = null;
+      recordingGestureOffset = null;
       recordingChunks = [];
       resolve();
     }
@@ -856,17 +894,23 @@ function abortPractice2Recording() {
       recordingChunks = [];
       mediaRecorder = null;
       recordingMode = null;
+      recordingStartedAt = null;
+      recordingGestureOffset = null;
     };
     try {
       mediaRecorder.stop();
     } catch (_) {
       mediaRecorder = null;
       recordingMode = null;
+      recordingStartedAt = null;
+      recordingGestureOffset = null;
     }
   } else {
     recordingChunks = [];
     mediaRecorder = null;
     recordingMode = null;
+    recordingStartedAt = null;
+    recordingGestureOffset = null;
   }
 }
 
@@ -931,6 +975,9 @@ let segCanvas = null;
 let segCtx = null;
 let reelRAF = null;
 let reelRecorder = null;
+let reelRendering = false;
+let reelMusicContext = null;
+let reelMusicBufferPromise = null;
 
 function loadBackground() {
   bgImage = new Image();
@@ -974,29 +1021,129 @@ function compositeFrame(source, destCtx) {
 
 function pickReelMime() {
   const candidates = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
     'video/mp4;codecs=avc1.42E01E',
     'video/mp4;codecs=avc1',
     'video/mp4',
+    'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp9',
     'video/webm',
   ];
   return candidates.find(type => MediaRecorder.isTypeSupported(type)) || '';
 }
 
-function playReel() {
-  showScreen('reveal');
+function preloadReelMusic() {
+  if (!REEL_MUSIC_URL || reelMusicBufferPromise) return reelMusicBufferPromise;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  reelMusicContext = reelMusicContext || new AudioContextClass();
+  reelMusicBufferPromise = fetch(REEL_MUSIC_URL)
+    .then(response => {
+      if (!response.ok) throw new Error(`Music failed to load (${response.status})`);
+      return response.arrayBuffer();
+    })
+    .then(data => reelMusicContext.decodeAudioData(data))
+    .catch(error => {
+      console.warn('[ElderScroll] reel music unavailable; rendering silently', error);
+      return null;
+    });
+  return reelMusicBufferPromise;
+}
+
+function buildReelTimeline() {
+  if (!REEL_SEQUENCE.length) {
+    return recordedClips.map(clip => ({
+      clip,
+      duration: clip.duration || 1,
+    }));
+  }
+
+  const clipsByLesson = new Map();
+  for (const clip of recordedClips) {
+    if (!clipsByLesson.has(clip.lessonId)) clipsByLesson.set(clip.lessonId, clip);
+  }
+
+  const timeline = [];
+  for (const section of REEL_SEQUENCE) {
+    const clip = clipsByLesson.get(section.lessonId);
+    if (!clip) {
+      console.warn(`[ElderScroll] no clip for reel action: ${section.lessonId}`);
+      continue;
+    }
+    const repeat = Math.max(1, section.repeat || 1);
+    const duration = Math.max(0.05, (section.end - section.start) / repeat);
+    for (let i = 0; i < repeat; i++) timeline.push({ clip, duration });
+  }
+  if (timeline.length) return timeline;
+  return recordedClips.map(clip => ({
+    clip,
+    duration: clip.duration || 1,
+  }));
+}
+
+function prepareRecordedClips() {
+  return Promise.all(recordedClips.map(clip => {
+    if (clip.video && Number.isFinite(clip.duration)) return clip;
+    return new Promise(resolve => {
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      const done = () => {
+        clip.video = video;
+        clip.duration = Number.isFinite(video.duration) && video.duration > 0
+          ? video.duration
+          : 5;
+        resolve(clip);
+      };
+      video.onloadedmetadata = done;
+      video.onerror = done;
+      video.src = clip.url;
+      video.load();
+    });
+  }));
+}
+
+function sourceStartFor(slot) {
+  const sourceDuration = slot.clip.duration || slot.duration;
+  const gestureOffset = Number.isFinite(slot.clip.gestureOffset)
+    ? slot.clip.gestureOffset
+    : sourceDuration / 2;
+  return Math.max(
+    0,
+    Math.min(gestureOffset - slot.duration / 2, sourceDuration - slot.duration)
+  );
+}
+
+async function playReel() {
   currentCancelAction = null;
   currentSkipAction = null;
   if (!recordedClips.length) {
+    showScreen('reveal');
     setUploadUi(CONTENT.reveal.noClips, '');
     return;
   }
-  if (reelRecorder) return;
+  if (reelRecorder || reelRendering) return;
+  reelRendering = true;
 
   recordedClips.sort((a, b) => a.order - b.order);
+  await prepareRecordedClips();
+  const timeline = buildReelTimeline();
+  if (!timeline.length) {
+    reelRendering = false;
+    showScreen('reveal');
+    setUploadUi(CONTENT.reveal.noClips, '');
+    return;
+  }
+
+  const musicBuffer = await preloadReelMusic();
+  if (reelMusicContext && reelMusicContext.state === 'suspended') {
+    await reelMusicContext.resume().catch(() => {});
+  }
+
+  showScreen('reveal');
   setUploadUi('', '');
 
-  const source = el('#reel-source');
   const canvas = el('#reel-canvas');
   const context = canvas.getContext('2d');
   const useBackground = Boolean(
@@ -1007,73 +1154,105 @@ function playReel() {
   if (useBackground) ensureSegCanvas();
 
   const reelMime = pickReelMime();
-  const extension = reelMime.includes('mp4') ? 'mp4' : 'webm';
+  const canvasStream = canvas.captureStream(30);
+  let musicSource = null;
+  let musicDestination = null;
+  const totalDuration = timeline.reduce((sum, slot) => sum + slot.duration, 0);
+
+  if (musicBuffer && reelMusicContext) {
+    musicSource = reelMusicContext.createBufferSource();
+    musicDestination = reelMusicContext.createMediaStreamDestination();
+    musicSource.buffer = musicBuffer;
+    musicSource.connect(musicDestination);
+    musicSource.connect(reelMusicContext.destination);
+  }
+
+  const outputStream = new MediaStream([
+    ...canvasStream.getVideoTracks(),
+    ...(musicDestination ? musicDestination.stream.getAudioTracks() : []),
+  ]);
   const chunks = [];
-  reelRecorder = new MediaRecorder(
-    canvas.captureStream(30),
-    reelMime ? { mimeType: reelMime } : undefined
-  );
+  try {
+    reelRecorder = new MediaRecorder(
+      outputStream,
+      reelMime ? { mimeType: reelMime } : undefined
+    );
+  } catch (error) {
+    console.warn('[ElderScroll] preferred reel format unavailable; using browser default', error);
+    reelRecorder = new MediaRecorder(outputStream);
+  }
+  const actualMime = reelRecorder.mimeType || reelMime || 'video/webm';
+  const extension = actualMime.includes('mp4') ? 'mp4' : 'webm';
   reelRecorder.ondataavailable = event => {
     if (event.data && event.data.size) chunks.push(event.data);
   };
   reelRecorder.onstop = () => {
-    const blob = new Blob(chunks, { type: reelMime || 'video/webm' });
+    const blob = new Blob(chunks, { type: actualMime });
     reelRecorder = null;
+    reelRendering = false;
     finalizeReel(blob, extension);
   };
   reelRecorder.start();
 
-  let clipIndex = 0;
-  let advancing = false;
-  let watchdog = null;
+  let slotIndex = -1;
+  let activeVideo = null;
+  let reelStartedAt = performance.now();
+  const boundaries = [];
+  timeline.reduce((elapsed, slot) => {
+    boundaries.push(elapsed);
+    return elapsed + slot.duration;
+  }, 0);
 
   function draw() {
-    if (!source.paused && !source.ended) {
-      if (useBackground) compositeFrame(source, context);
-      else context.drawImage(source, 0, 0, REC_W, REC_H);
+    const elapsed = (performance.now() - reelStartedAt) / 1000;
+    if (elapsed >= totalDuration) {
+      finish();
+      return;
+    }
+
+    let nextIndex = slotIndex;
+    while (
+      nextIndex + 1 < timeline.length &&
+      elapsed >= boundaries[nextIndex + 1]
+    ) {
+      nextIndex += 1;
+    }
+    if (nextIndex !== slotIndex) {
+      if (activeVideo) activeVideo.pause();
+      slotIndex = nextIndex;
+      const slot = timeline[slotIndex];
+      activeVideo = slot.clip.video;
+      activeVideo.currentTime = sourceStartFor(slot);
+      activeVideo.play().catch(error => {
+        console.warn('[ElderScroll] reel clip could not play', error);
+      });
+    }
+
+    if (activeVideo && activeVideo.readyState >= 2) {
+      if (useBackground) compositeFrame(activeVideo, context);
+      else context.drawImage(activeVideo, 0, 0, REC_W, REC_H);
     }
     reelRAF = requestAnimationFrame(draw);
   }
 
   function finish() {
+    if (!reelRAF) return;
     cancelAnimationFrame(reelRAF);
     reelRAF = null;
-    clearTimeout(watchdog);
-    source.onended = source.onloadedmetadata = source.onplay = null;
-    if (reelRecorder && reelRecorder.state !== 'inactive') reelRecorder.stop();
-  }
-
-  function playNext() {
-    if (clipIndex >= recordedClips.length) {
-      finish();
-      return;
+    if (activeVideo) activeVideo.pause();
+    if (musicSource) {
+      try { musicSource.stop(); } catch (_) {}
     }
-    source.src = recordedClips[clipIndex++].url;
-    source.play().catch(error => {
-      console.warn('[ElderScroll] reel clip could not play', error);
-    });
+    if (reelRecorder && reelRecorder.state !== 'inactive') reelRecorder.stop();
+    outputStream.getTracks().forEach(track => track.stop());
   }
 
-  function advance() {
-    if (advancing) return;
-    advancing = true;
-    clearTimeout(watchdog);
-    playNext();
+  if (musicSource) {
+    const musicStart = REEL_SEQUENCE.length ? REEL_SEQUENCE[0].start : 0;
+    musicSource.start(0, musicStart, totalDuration);
   }
-
-  source.onended = advance;
-  source.onloadedmetadata = () => {
-    const duration = Number.isFinite(source.duration) && source.duration > 0
-      ? source.duration
-      : 8;
-    clearTimeout(watchdog);
-    watchdog = setTimeout(advance, duration * 1000 + 1000);
-  };
-  source.onplay = () => {
-    advancing = false;
-    if (!reelRAF) draw();
-  };
-  playNext();
+  reelStartedAt = performance.now();
+  reelRAF = requestAnimationFrame(draw);
 }
 
 function reelFilename(extension) {
