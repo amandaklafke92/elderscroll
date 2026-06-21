@@ -31,16 +31,16 @@ const CONFIG = {
 
   /* Move = bilateral push forward. Two-stage detector:
        (1) ARM  — both wrists pulled back near the body. Triggers when
-                  wrist.z is ABOVE pushBackZ (z near 0 = wrists at the
-                  body's depth plane; positive = slightly behind it).
+                  wrist.z is ABOVE pushBackZ (less negative).
        (2) FIRE — both wrists thrust forward. Triggers when wrist.z
-                  is BELOW pushForwardZ (the more negative, the further
-                  out the arms must reach).
-     The arming step is what stops the gesture firing on a partial push.
-     Tune `pushBackZ` upward if it's hard to arm; tune `pushForwardZ`
-     more negative if it still fires before the full extension. */
-  pushBackZ:        0.0,
-  pushForwardZ:    -0.55,
+                  is BELOW pushForwardZ (more negative).
+     `pushBackZ` is intentionally a bit negative because resting wrists
+     usually hang slightly in front of the hip plane. Raise it (toward 0
+     or positive) for a stricter arming; lower it (more negative) if the
+     gesture is hard to arm. `pushForwardZ` controls how far you have
+     to reach — more negative = fuller extension required. */
+  pushBackZ:       -0.15,
+  pushForwardZ:    -0.35,
 
   /* Zoom In = one arm straight up. A wrist must rise above the nose by
      at least this much (normalized image y units). Larger = the hand

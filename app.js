@@ -235,12 +235,12 @@ function detectPushForward(lm) {
   const ls = lm[11], rs = lm[12], lw = lm[15], rw = lm[16];
   if (!visible(ls) || !visible(rs) || !visible(lw) || !visible(rw)) return false;
   if (typeof lw.z !== 'number' || typeof rw.z !== 'number') return false;
-  const wristsAtShoulderY =
-    Math.abs(lw.y - ls.y) < 0.28 && Math.abs(rw.y - rs.y) < 0.28;
+  const wristsAtChestOrShoulder =
+    Math.abs(lw.y - ls.y) < 0.40 && Math.abs(rw.y - rs.y) < 0.40;
   const wristsBack    = lw.z > PUSH_BACK_Z    && rw.z > PUSH_BACK_Z;
   const wristsForward = lw.z < PUSH_FORWARD_Z && rw.z < PUSH_FORWARD_Z;
-  if (wristsBack && wristsAtShoulderY) pushArmed = true;
-  const fire = pushArmed && wristsForward && wristsAtShoulderY;
+  if (wristsBack && wristsAtChestOrShoulder) pushArmed = true;
+  const fire = pushArmed && wristsForward && wristsAtChestOrShoulder;
   const triggered = holdGate(pushForwardState, fire);
   if (triggered) pushArmed = false;
   return triggered;
