@@ -41,12 +41,17 @@ const POST_CAPTURE_MS  = CONFIG.postCaptureMs;
 const MP_BUNDLE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
 const MP_WASM   = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm';
 const MP_MODEL  = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+const MP_SEG_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite';
 
 /* ---------- Tiny DOM helper ---------- */
 const el = (sel) => document.querySelector(sel);
 
 /* ---------- App state ---------- */
 let poseLandmarker = null;
+let imageSegmenter = null;
+let bgImage = null;
+let bgReady = false;
+let participantName = '';
 let camera = null;
 let lastVideoTime = -1;
 let activeGestureHandler = null;   // set by practice screens; null elsewhere
@@ -57,6 +62,9 @@ let failureTimer = null;
 
 let lessonIdx = 0;
 let currentLesson = null;
+
+const UPLOAD_ENDPOINT = CONFIG.uploadEndpoint;
+const VIDEO_LIBRARY_URL = CONFIG.videoLibraryUrl;
 
 /* =====================================================================
    1. STARTUP — camera + MediaPipe, triggered by the Start button
@@ -88,8 +96,22 @@ async function start() {
       numPoses: 1
     });
 
+    if (CONFIG.recordBackground) {
+      try {
+        imageSegmenter = await vision.ImageSegmenter.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: MP_SEG_MODEL, delegate: 'GPU' },
+          runningMode: 'VIDEO',
+          outputConfidenceMasks: true,
+          outputCategoryMask: false,
+        });
+        loadBackground();
+      } catch (err) {
+        console.warn('[ElderScroll] background swap unavailable; using the real background', err);
+      }
+    }
+
     requestAnimationFrame(detectLoop);
-    goState('intro');
+    goState('name');
   } catch (err) {
     console.error(err);
     status.textContent = 'Could not start: ' + err.message +
@@ -295,6 +317,10 @@ function goState(state) {
   clearTimeout(failureTimer);
 
   switch (state) {
+    case 'name':
+      showScreen('name');
+      setupName();
+      break;
     case 'intro':
       showScreen('intro');
       runIntro(() => startLesson(0));
@@ -358,9 +384,36 @@ function goState(state) {
     case 'all-complete':
       el('#success-msg').textContent = CONTENT.completeText;
       showScreen('success');
-      runConfetti(() => {});       // stay on the final screen
+      runConfetti(async () => {
+        await waitForPendingRecordings();
+        playReel();
+      });
       break;
   }
+}
+
+function setupName() {
+  const input = el('#name-input');
+  const button = el('#name-btn');
+  el('#name-eyebrow').textContent = CONTENT.name.eyebrow;
+  el('#name-question').textContent = CONTENT.name.question;
+  button.textContent = CONTENT.name.button;
+  input.value = participantName;
+  setTimeout(() => input.focus(), 50);
+
+  const submit = () => {
+    participantName = input.value.trim();
+    recordedClips.forEach(clip => URL.revokeObjectURL(clip.url));
+    recordedClips = [];
+    goState('intro');
+  };
+  button.onclick = submit;
+  input.onkeydown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submit();
+    }
+  };
 }
 
 function startLesson(idx) {
@@ -498,7 +551,12 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
       // Let the recorder keep running for POST_CAPTURE_MS, then save the
       // clip — in the background.  Confetti can roll in parallel so the
       // user sees feedback immediately.
-      setTimeout(() => { endPractice2Recording(lesson); }, POST_CAPTURE_MS);
+      trackPendingRecording(new Promise((resolve) => {
+        setTimeout(async () => {
+          await endPractice2Recording(lesson);
+          resolve();
+        }, POST_CAPTURE_MS);
+      }));
     }
     onSuccess();
   };
@@ -618,6 +676,17 @@ async function saveClip({ blob, lessonId, lessonName, gestureLabel }) {
 
 let mediaRecorder = null;
 let recordingChunks = [];
+let recordedClips = [];
+const pendingRecordings = new Set();
+
+function trackPendingRecording(promise) {
+  pendingRecordings.add(promise);
+  promise.finally(() => pendingRecordings.delete(promise));
+}
+
+async function waitForPendingRecordings() {
+  await Promise.all([...pendingRecordings]);
+}
 
 function beginPractice2Recording() {
   recordingChunks = [];
@@ -653,6 +722,15 @@ function endPractice2Recording(lesson) {
       const blob = new Blob(recordingChunks, { type: mime });
       recordingChunks = [];
       mediaRecorder = null;
+      if (blob.size > 0) {
+        recordedClips.push({
+          lessonId: lesson.id,
+          lessonName: lesson.name,
+          order: CONTENT.lessons.findIndex(item => item.id === lesson.id),
+          blob,
+          url: URL.createObjectURL(blob),
+        });
+      }
       await saveClip({
         blob,
         lessonId: lesson.id,
@@ -686,10 +764,234 @@ function abortPractice2Recording() {
 }
 
 /* =====================================================================
-   10. PRESENTER KEYS + DEBUG (fallback so a demo never stalls)
+   10. REEL — combine Practice 2 clips, reveal, download, and upload
+   ===================================================================== */
+const REC_W = 854;
+const REC_H = 480;
+const SEG_THRESHOLD = 0.5;
+let segInvert = false;
+let segCanvas = null;
+let segCtx = null;
+let reelRAF = null;
+let reelRecorder = null;
+
+function loadBackground() {
+  bgImage = new Image();
+  bgImage.onload = () => {
+    bgReady = true;
+    console.log('[ElderScroll] reveal background ready');
+  };
+  bgImage.onerror = () => {
+    console.warn('[ElderScroll] reveal background failed to load:', CONFIG.recordBackground);
+  };
+  bgImage.src = CONFIG.recordBackground;
+}
+
+function ensureSegCanvas() {
+  if (segCanvas) return;
+  segCanvas = document.createElement('canvas');
+  segCanvas.width = REC_W;
+  segCanvas.height = REC_H;
+  segCtx = segCanvas.getContext('2d', { willReadFrequently: true });
+}
+
+function compositeFrame(source, destCtx) {
+  segCtx.drawImage(source, 0, 0, REC_W, REC_H);
+  imageSegmenter.segmentForVideo(segCanvas, performance.now(), (result) => {
+    const mask = result.confidenceMasks && result.confidenceMasks[0];
+    if (!mask) {
+      destCtx.drawImage(segCanvas, 0, 0);
+      return;
+    }
+    const foreground = mask.getAsFloat32Array();
+    const image = segCtx.getImageData(0, 0, REC_W, REC_H);
+    for (let i = 0; i < foreground.length; i++) {
+      const person = segInvert ? 1 - foreground[i] : foreground[i];
+      image.data[i * 4 + 3] = person > SEG_THRESHOLD ? 255 : 0;
+    }
+    segCtx.putImageData(image, 0, 0);
+    destCtx.drawImage(bgImage, 0, 0, REC_W, REC_H);
+    destCtx.drawImage(segCanvas, 0, 0);
+  });
+}
+
+function pickReelMime() {
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm',
+  ];
+  return candidates.find(type => MediaRecorder.isTypeSupported(type)) || '';
+}
+
+function playReel() {
+  showScreen('reveal');
+  if (!recordedClips.length) {
+    setUploadUi(CONTENT.reveal.noClips, '');
+    return;
+  }
+  if (reelRecorder) return;
+
+  recordedClips.sort((a, b) => a.order - b.order);
+  setUploadUi(CONTENT.reveal.rendering, '');
+
+  const source = el('#reel-source');
+  const canvas = el('#reel-canvas');
+  const context = canvas.getContext('2d');
+  const useBackground = Boolean(
+    CONFIG.recordBackground && imageSegmenter && bgReady
+  );
+  canvas.width = REC_W;
+  canvas.height = REC_H;
+  if (useBackground) ensureSegCanvas();
+
+  const reelMime = pickReelMime();
+  const extension = reelMime.includes('mp4') ? 'mp4' : 'webm';
+  const chunks = [];
+  reelRecorder = new MediaRecorder(
+    canvas.captureStream(30),
+    reelMime ? { mimeType: reelMime } : undefined
+  );
+  reelRecorder.ondataavailable = event => {
+    if (event.data && event.data.size) chunks.push(event.data);
+  };
+  reelRecorder.onstop = () => {
+    const blob = new Blob(chunks, { type: reelMime || 'video/webm' });
+    reelRecorder = null;
+    finalizeReel(blob, extension);
+  };
+  reelRecorder.start();
+
+  let clipIndex = 0;
+  let advancing = false;
+  let watchdog = null;
+
+  function draw() {
+    if (!source.paused && !source.ended) {
+      if (useBackground) compositeFrame(source, context);
+      else context.drawImage(source, 0, 0, REC_W, REC_H);
+    }
+    reelRAF = requestAnimationFrame(draw);
+  }
+
+  function finish() {
+    cancelAnimationFrame(reelRAF);
+    reelRAF = null;
+    clearTimeout(watchdog);
+    source.onended = source.onloadedmetadata = source.onplay = null;
+    if (reelRecorder && reelRecorder.state !== 'inactive') reelRecorder.stop();
+  }
+
+  function playNext() {
+    if (clipIndex >= recordedClips.length) {
+      finish();
+      return;
+    }
+    source.src = recordedClips[clipIndex++].url;
+    source.play().catch(error => {
+      console.warn('[ElderScroll] reel clip could not play', error);
+    });
+  }
+
+  function advance() {
+    if (advancing) return;
+    advancing = true;
+    clearTimeout(watchdog);
+    playNext();
+  }
+
+  source.onended = advance;
+  source.onloadedmetadata = () => {
+    const duration = Number.isFinite(source.duration) && source.duration > 0
+      ? source.duration
+      : (GET_READY_MS + POST_CAPTURE_MS) / 1000;
+    clearTimeout(watchdog);
+    watchdog = setTimeout(advance, duration * 1000 + 1000);
+  };
+  source.onplay = () => {
+    advancing = false;
+    if (!reelRAF) draw();
+  };
+  playNext();
+}
+
+function reelFilename(extension) {
+  const safeName = (participantName || 'reel')
+    .replace(/[^a-z0-9_-]+/gi, '_')
+    .replace(/^_+|_+$/g, '');
+  return `${safeName || 'reel'}.${extension}`;
+}
+
+function finalizeReel(blob, extension) {
+  triggerDownload(blob, extension);
+  uploadReel(blob, extension);
+}
+
+function triggerDownload(blob, extension) {
+  const anchor = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  anchor.href = url;
+  anchor.download = reelFilename(extension);
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function uploadReel(blob, extension) {
+  setUploadUi(CONTENT.reveal.uploadPending, '');
+  try {
+    const params = new URLSearchParams({
+      name: participantName || 'Anonymous',
+      ext: extension,
+    });
+    const response = await fetch(`${UPLOAD_ENDPOINT}?${params}`, {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type || `video/${extension}` },
+      body: blob,
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error || `Upload failed (${response.status})`);
+    }
+    const shareUrl = result.url ||
+      (result.id ? `${VIDEO_LIBRARY_URL}/v/${result.id}` : '');
+    if (!shareUrl) throw new Error('Upload succeeded without a video URL');
+    setUploadUi(CONTENT.reveal.uploadSuccess, shareUrl);
+  } catch (error) {
+    console.warn('[ElderScroll] Lovable upload failed; local copy was kept', error);
+    setUploadUi(CONTENT.reveal.uploadFailed, '');
+  }
+}
+
+function setUploadUi(message, shareUrl) {
+  const status = el('#upload-status');
+  const link = el('#download-link');
+  status.textContent = message;
+  if (shareUrl) {
+    link.href = shareUrl;
+    link.textContent = CONTENT.reveal.downloadButton;
+    link.classList.remove('hidden');
+  } else {
+    link.removeAttribute('href');
+    link.classList.add('hidden');
+  }
+}
+
+/* =====================================================================
+   11. PRESENTER KEYS + DEBUG (fallback so a demo never stalls)
    ===================================================================== */
 function setupPresenterKeys() {
   document.addEventListener('keydown', (e) => {
+    const target = e.target;
+    if (target && (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    )) return;
+
     if (e.key === ' ') {
       e.preventDefault();
       // Space fires whatever gesture the current practice expects.
@@ -704,6 +1006,9 @@ function setupPresenterKeys() {
       if (activeGestureHandler) activeGestureHandler('leanLeft');
     } else if (e.key === 'd') {
       el('#debug').classList.toggle('hidden');
+    } else if (e.key === 'i') {
+      segInvert = !segInvert;
+      console.log('[ElderScroll] segmentation inverted:', segInvert);
     }
   });
 }

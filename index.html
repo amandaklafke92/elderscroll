@@ -38,6 +38,17 @@
     </div>
   </section>
 
+  <!-- NAME — tags the finished reel in the Lovable video library -->
+  <section id="screen-name" class="screen screen-opaque hidden">
+    <div class="center-stack">
+      <p id="name-eyebrow" class="intro-eyebrow"></p>
+      <h1 id="name-question" class="intro-equation"></h1>
+      <input id="name-input" class="name-input" type="text" autocomplete="off"
+        maxlength="40" placeholder="Type your name" />
+      <button id="name-btn" class="big-action">Begin</button>
+    </div>
+  </section>
+
   <!-- INTRO video (plays once after Start) -->
   <section id="screen-intro" class="screen screen-opaque hidden">
     <div class="video-frame">
@@ -105,6 +116,18 @@
       <div class="success-tick">✓</div>
       <h2 id="success-msg" class="success-msg">Well done!</h2>
     </div>
+  </section>
+
+  <!-- REVEAL — the five Practice 2 clips rendered into one downloadable reel -->
+  <section id="screen-reveal" class="screen screen-opaque hidden">
+    <div class="video-frame">
+      <canvas id="reel-canvas"></canvas>
+    </div>
+    <div class="reveal-actions">
+      <p id="upload-status" class="upload-status"></p>
+      <a id="download-link" class="download-link hidden" target="_blank" rel="noopener"></a>
+    </div>
+    <video id="reel-source" class="hidden" playsinline muted></video>
   </section>
 
   <!-- Persona config + content load first, then the shared engine reads them. -->

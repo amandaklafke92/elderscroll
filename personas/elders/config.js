@@ -75,4 +75,10 @@ const CONFIG = {
      post-capture window gives the "3 seconds AFTER the gesture" portion. */
   getReadyMs:     3000,
   postCaptureMs:  3000,
+
+  /* Final reel + Lovable handoff. The passcode remains in the local helper,
+     never in browser-delivered code. */
+  uploadEndpoint: 'http://localhost:8787/upload',
+  videoLibraryUrl: 'https://claude-vid-spot.lovable.app',
+  recordBackground: 'assets/background-beat-it.jpeg',
 };

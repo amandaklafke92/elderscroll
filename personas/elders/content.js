@@ -14,6 +14,12 @@
    as a shared global.
    ===================================================================== */
 const CONTENT = {
+  name: {
+    eyebrow: 'WELCOME',
+    question: "What's your name?",
+    button: 'Begin',
+  },
+
   /* Intro screen plays this video once after the user presses Start. */
   intro: {
     video: 'Videos/intro.mp4',
@@ -87,6 +93,15 @@ const CONTENT = {
   p1SuccessText: 'Nice!',
   successText: 'Well done!',
   completeText: "You're all set!",
+
+  reveal: {
+    rendering: 'Making your video…',
+    uploadPending: 'Saving your video…',
+    uploadSuccess: 'Your video is ready.',
+    uploadFailed: 'Your video was saved on this computer, but could not reach the download library.',
+    noClips: 'No Practice 2 clips were recorded.',
+    downloadButton: 'Download your video',
+  },
 
   /* Shown after a while with no success on a practice screen. */
   helpText:

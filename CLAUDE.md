@@ -43,11 +43,12 @@ recording stays secret until then.
 ### Status — built vs. to build
 The engine now detects the full gesture set above and runs the sequential auto-advance
 flow: intro → for each lesson (tutorial → 3-2-1 countdown → practice 1 with feedback →
-practice 2, silently recorded → success) → completion screen. Practice-2 clips are
-saved to IndexedDB (`elderscroll/clips`) with `lessonId / lessonName / gestureLabel /
-timestamp / clipReference`. Legacy clap + lean detectors remain in the engine but no
-current lesson uses them. Still to do: **stitching**, the **reveal screen**, and
-(stretch) the **background swap**.
+practice 2, silently recorded → success) → final reel. Practice-2 clips are saved to
+IndexedDB as a backup and kept in memory for the reveal. At completion they are ordered
+by lesson, rendered into one video, downloaded locally, and uploaded through
+`upload-helper.mjs` to the Lovable video library. The reveal shows the participant's
+unique download link. Background replacement is attempted during rendering and falls
+back to the real camera background if segmentation is unavailable.
 
 ### Who owns what (hackathon)
 - **Amanda** — recording + stitching + the final reveal screen.
