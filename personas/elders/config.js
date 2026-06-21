@@ -34,10 +34,13 @@ const CONFIG = {
      shoulder height.  More negative = arms must be pushed further out. */
   pushForwardZ:    -0.40,
 
-  /* Zoom In = one arm straight up. A wrist must rise above the nose by
-     at least this much (normalized image y units). Larger = the hand
-     must be clearly above the head, not just nose-height. */
-  reachUpMargin:   0.20,
+  /* Zoom In = BOTH arms straight up. Each wrist must rise above the
+     nose by at least this much (normalized image y units) OR go off
+     the top of the camera frame. Lower = easier to register, but more
+     likely to fire on a partial raise. Wrists that exit the frame are
+     always counted as "up" so a full extension does not get penalised
+     by MediaPipe losing them at the top edge. */
+  reachUpMargin:   0.08,
 
   /* Zoom Out = hands together at chest → arms wide. Detector arms when
      wrists are close (< near × shoulderWidth) at chest level, fires

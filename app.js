@@ -233,16 +233,23 @@ function detectPushForward(lm) {
   return holdGate(pushForwardState, wristsForward && wristsAtShoulderY);
 }
 
-/* --- Zoom In = BOTH arms extended overhead. Both wrists must clear the
-   nose by REACH_UP_MARGIN (image-space units; smaller y = higher). */
+/* --- Zoom In = BOTH arms extended overhead.
+   Two wrist conditions count as "up":
+     - the wrist's y is above the nose by REACH_UP_MARGIN, OR
+     - the wrist has gone off the top of the camera frame (y <= 0).
+   We also skip the strict visibility check on the wrists: MediaPipe
+   drops visibility when an arm is partly occluded or near the frame
+   edge, but the y coordinate is still usable. The nose still needs
+   to be visible (so we have a vertical reference). */
 const reachUpState = { frames: 0, last: 0 };
+let lastReachUpVals = { ly: 0, ry: 0, ny: 0 };
 function detectReachUp(lm) {
   const nose = lm[0], lw = lm[15], rw = lm[16];
-  if (!visible(nose) || !visible(lw) || !visible(rw)) return false;
-  const bothAbove =
-    lw.y < nose.y - REACH_UP_MARGIN &&
-    rw.y < nose.y - REACH_UP_MARGIN;
-  return holdGate(reachUpState, bothAbove);
+  if (!visible(nose) || !lw || !rw) return false;
+  lastReachUpVals = { ly: lw.y, ry: rw.y, ny: nose.y };
+  const lwUp = lw.y < nose.y - REACH_UP_MARGIN || lw.y <= 0;
+  const rwUp = rw.y < nose.y - REACH_UP_MARGIN || rw.y <= 0;
+  return holdGate(reachUpState, lwUp && rwUp);
 }
 
 /* --- Zoom Out = wrists transition from near each other at chest
@@ -1166,5 +1173,6 @@ function updateDebug(lm) {
     `lean offset:    ${leanOffset.toFixed(2)} (>${LEAN_ENTER})\n` +
     `rotate ratio:   ${rotateR.toFixed(2)} (<${ROTATE_RATIO})\n` +
     `last z (lw/rw): ${(lm[15].z ?? 0).toFixed(2)} / ${(lm[16].z ?? 0).toFixed(2)}\n` +
+    `reach-up y (nose / lw / rw): ${lastReachUpVals.ny.toFixed(2)} / ${lastReachUpVals.ly.toFixed(2)} / ${lastReachUpVals.ry.toFixed(2)} (need < ${(lastReachUpVals.ny - REACH_UP_MARGIN).toFixed(2)})\n` +
     `fires: ${fires || '-'}`;
 }
