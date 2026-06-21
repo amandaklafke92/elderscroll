@@ -1,4 +1,4 @@
-# Movement App — Hackathon Action Plan
+# ElderScroll — Hackathon Action Plan
 *Terrible Ideas Hackathon · drafted 2026-06-21 · 6-hour build*
 
 ## What we're building (the bit)
