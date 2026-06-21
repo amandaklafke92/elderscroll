@@ -7,6 +7,29 @@ rounds; only Practice 2 is recorded.
 At the end, the five clips are rendered into one reel, downloaded locally, uploaded
 to the Lovable video library, and shown with a participant-specific download link.
 
+<p align="center">
+  <img src="assets/screenshots/01-landing.png" alt="ElderScroll landing screen" width="700" />
+</p>
+
+## The bit
+
+On the surface, ElderScroll "teaches elderly people technology" by mapping body
+movements to digital actions. That framing is misdirection. Each gesture secretly
+corresponds to a move from a specific TikTok dance. While participants think they're
+learning tech, the laptop camera records them performing the moves — and the clips
+are stitched into a side-by-side recreation of the original TikTok. The reveal is the
+payoff.
+
+## The user journey
+
+| | |
+|---|---|
+| **1. Landing** — start the camera. <br><img src="assets/screenshots/01-landing.png" width="380" /> | **2. Name** — the participant signs in. <br><img src="assets/screenshots/02-name.png" width="380" /> |
+| **3. Intro** — a welcome video sets the cover story. <br><img src="assets/screenshots/03-intro.png" width="380" /> | **4a. Tutorial** — each lesson opens with a how-to clip. <br><img src="assets/screenshots/04a-tutorial-click.png" width="380" /> |
+| **4b. Practice** — the participant tries the gesture. <br><img src="assets/screenshots/04b-practise.png" width="380" /> | **4c. 3-2-1** — a countdown before the recorded take. <br><img src="assets/screenshots/04c-3-2-1.png" width="380" /> |
+| **4d. Success** — gesture detected, on to the next. <br><img src="assets/screenshots/04d-success.png" width="380" /> | **5. Gift** — after the last lesson, a short message. <br><img src="assets/screenshots/05-gift.png" width="380" /> |
+| **6a. Saving** — the reel renders ("to the batcave"). <br><img src="assets/screenshots/06a-saving-to-batcave.png" width="380" /> | **6b. Reveal** — the finished reel plays with a download link. <br><img src="assets/screenshots/06b-download-video.png" width="380" /> |
+
 ## Run it
 
 Open two terminal windows in this folder.
@@ -65,9 +88,16 @@ before the final public demo.
 - `personas/elders/content.js` — lesson order, copy, and gesture mappings.
 - `personas/elders/config.js` — gesture thresholds, timing, and upload settings.
 - `upload-helper.mjs` — local bridge to the Lovable upload endpoint.
-- `Videos/` — intro and lesson tutorial videos.
+- `assets/tutorials/` — intro and lesson tutorial videos.
 - `assets/background-beat-it.jpeg` — optional reveal background.
 
 Chrome is recommended. The first run requires internet access to download MediaPipe
 models. If background segmentation fails, reel creation continues with the real
 camera background.
+
+## Inspiration
+
+The secret choreography is taken from this TikTok:
+[@nathanlust](https://www.tiktok.com/@nathanlust/video/7626403103511776532).
+</content>
+</invoke>
