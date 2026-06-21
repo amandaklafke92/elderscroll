@@ -50,12 +50,14 @@ by lesson, rendered into one video, downloaded locally, and uploaded through
 unique download link. Background replacement is attempted during rendering and falls
 back to the real camera background if segmentation is unavailable.
 
-### Who owns what (hackathon)
-- **Amanda** — recording + stitching + the final reveal screen.
+### Who owns what (hackathon — as it actually shipped)
+- **Amanda** — recording + stitching + the final reveal screen; also built the
+  background superimposition and added the music (both via Claude), using the
+  background and track Joumana sourced.
 - **Camilla** — user-flow updates (remove library, auto-advance, practice-1/2,
   countdown) + tutorial videos.
-- **Joumana** — camera placement + ideal real-world background; (stretch) background-
-  image swap in edit; music (shared with Camilla).
+- **Joumana** — camera placement + ideal real-world background; sourced the
+  background image and the music track (Amanda wired both into the render).
 
 Full plan with the *why* per task: `docs/action-plan_elderscroll-2026-06-20.md`.
 
