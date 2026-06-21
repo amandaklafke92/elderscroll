@@ -1126,6 +1126,29 @@ function setupPresenterKeys() {
       }
       return;
     }
+    if (key === 'f') {
+      e.preventDefault();
+      console.log('[TEST] Jumping to the final gift and reel');
+      activeGestureHandler = null;
+      currentSkipAction = null;
+      clearTimeout(helpTimer);
+      clearTimeout(failureTimer);
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        const lesson = currentLesson || {
+          id: `test-${Date.now()}`,
+          name: 'Test clip',
+          gestureLabel: 'Presenter test recording',
+          order: recordedClips.length,
+        };
+        trackPendingRecording(endPractice2Recording(lesson));
+      }
+      showScreen('gift');
+      runGiftScreen(async () => {
+        await waitForPendingRecordings();
+        playReel();
+      });
+      return;
+    }
 
     const target = e.target;
     if (target && (
