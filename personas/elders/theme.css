@@ -217,6 +217,9 @@ body {
   cursor: default;
   box-shadow: 6px 6px 0 var(--black);
   line-height: 1.5;
+  /* Smooth border/shadow transition so the highlight visibly migrates
+     between buttons when the gesture switches the .selected class. */
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
 .next-btn {
   font-size: 1.8rem;
@@ -231,9 +234,10 @@ body {
   background: var(--red);
   color: #fff;
   text-align: center;
+  /* No yellow default border — only show a border when highlighted (white). */
+  border-color: transparent;
 }
-/* SELECTED state — white border so it reads against the yellow buttons
-   (a yellow-on-yellow border was invisible). Keeps the hard shadow. */
+/* SELECTED / highlighted state. Highlight color is white everywhere. */
 .practice-btn.selected,
 .lesson-card.selected {
   border-color: #ffffff;

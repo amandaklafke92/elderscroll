@@ -37,17 +37,28 @@ const CONTENT = {
                          (HTML allowed; wrap key words in <strong>)
 
      Optional UI hints (default to off — Click is the simplest baseline):
-       - showNextButton  show the on-screen "next" button during practice
-       - badButtonText   show a second decoy button to the LEFT of "next"
-                         with the supplied label (purely cosmetic)
-       - showShutterIcon show the camera/shutter icon on the practice screen
-       - cameraEffect    fires on a successful gesture:
-                           'zoomIn'      → zoom the display layer in
-                           'zoomOut'     → reset the display layer to 1.0x
-                           'photoFlash'  → iPhone-style white flash + capture
-                         All effects apply ONLY to the display layer
-                         (#camera-display) so MediaPipe's detection feed
-                         (#camera) is never scaled. */
+       - showNextButton    show the on-screen "next" button during practice
+       - badButtonText     show a second decoy button to the LEFT of "next"
+                           with the supplied label (purely cosmetic)
+       - showShutterIcon   show the camera/shutter icon on the practice screen
+       - highlightTransition
+                           'badToNext' → bad button starts highlighted; the
+                           gesture migrates the highlight to "next".
+       - startZoomedIn     practice begins with the display layer already at
+                           DISPLAY_ZOOM_LEVEL (Zoom Out needs something to
+                           zoom out FROM).
+       - cameraEffect      fires on a successful gesture:
+                             'zoomIn'      → zoom the display layer in
+                             'zoomOut'     → reset the display layer to 1.0x
+                             'photoFlash'  → iPhone flash + freeze the
+                                             captured frame for the hold
+                           All effects apply ONLY to the display layer
+                           (#camera-display) so MediaPipe's detection feed
+                           (#camera) is never scaled.
+
+     After any cameraEffect / highlightTransition fires, the practice screen
+     holds for CONFIG.effectHoldMs (default 3s) so the user can SEE the
+     effect, then transitions to the success screen. */
   lessons: [
     {
       id: 'click',
@@ -67,6 +78,7 @@ const CONTENT = {
       instruction: 'Push <strong>both arms forward</strong>, like a gentle swipe.',
       showNextButton: true,
       badButtonText: 'If you stay on this button, your bank account PIN will be posted to Facebook.',
+      highlightTransition: 'badToNext',
     },
     {
       id: 'zoom-in',
@@ -84,6 +96,7 @@ const CONTENT = {
       gestureKey: 'openOut',
       gestureLabel: 'Open both arms out wide',
       instruction: 'Start with your hands at your chest, then <strong>open both arms out wide</strong>.',
+      startZoomedIn: true,
       cameraEffect: 'zoomOut',
     },
     {

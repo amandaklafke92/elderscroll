@@ -31,6 +31,11 @@
        Take a Photo gesture; sits above the screens for full-screen impact. -->
   <div id="flash-overlay" aria-hidden="true"></div>
 
+  <!-- Photo snapshot canvas. When Take a Photo fires, the current frame
+       from #camera-display is drawn here, then shown for the effect-hold
+       window so the user actually sees the photo they "took". -->
+  <canvas id="photo-snapshot" class="hidden" aria-hidden="true"></canvas>
+
   <!-- Confetti is drawn on this canvas during the success screen. -->
   <canvas id="confetti"></canvas>
 

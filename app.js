@@ -71,6 +71,7 @@ const VIDEO_LIBRARY_URL = CONFIG.videoLibraryUrl;
 const REEL_SEQUENCE = CONFIG.reelSequence || [];
 const REEL_MUSIC_URL = CONFIG.reelMusic || '';
 const DISPLAY_ZOOM_LEVEL = CONFIG.displayZoomLevel ?? 1.4;
+const EFFECT_HOLD_MS = CONFIG.effectHoldMs ?? 3000;
 let displayZoom = 1.0;
 
 /* =====================================================================
@@ -617,22 +618,43 @@ function triggerPhotoFlash() {
 }
 function capturePhotoFrame() {
   const cd = el('#camera-display');
-  if (!cd || cd.readyState < 2) return;
-  const canvas = document.createElement('canvas');
-  canvas.width = cd.videoWidth || 1280;
-  canvas.height = cd.videoHeight || 720;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  ctx.drawImage(cd, 0, 0, canvas.width, canvas.height);
-  console.log('[ElderScroll] photo captured:', canvas.width + 'x' + canvas.height);
+  const snapshot = el('#photo-snapshot');
+  if (!cd || !snapshot || cd.readyState < 2) return false;
+  snapshot.width = cd.videoWidth || 1280;
+  snapshot.height = cd.videoHeight || 720;
+  const ctx = snapshot.getContext('2d');
+  if (!ctx) return false;
+  // Mirror the snapshot so the saved frame matches what the participant
+  // sees on screen (the display layer is itself mirrored via CSS).
+  ctx.save();
+  ctx.translate(snapshot.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(cd, 0, 0, snapshot.width, snapshot.height);
+  ctx.restore();
+  console.log('[ElderScroll] photo captured:', snapshot.width + 'x' + snapshot.height);
+  return true;
+}
+function showPhotoSnapshot() {
+  const snapshot = el('#photo-snapshot');
+  if (snapshot) snapshot.classList.remove('hidden');
+}
+function hidePhotoSnapshot() {
+  const snapshot = el('#photo-snapshot');
+  if (snapshot) snapshot.classList.add('hidden');
 }
 function triggerCameraEffect(effect) {
   if (!effect) return;
   switch (effect) {
-    case 'zoomIn':     applyDisplayZoom(DISPLAY_ZOOM_LEVEL); break;
-    case 'zoomOut':    applyDisplayZoom(1.0); break;
-    case 'photoFlash': capturePhotoFrame(); triggerPhotoFlash(); break;
+    case 'zoomIn':  applyDisplayZoom(DISPLAY_ZOOM_LEVEL); break;
+    case 'zoomOut': applyDisplayZoom(1.0); break;
+    case 'photoFlash':
+      if (capturePhotoFrame()) showPhotoSnapshot();
+      triggerPhotoFlash();
+      break;
   }
+}
+function cleanupCameraEffect(effect) {
+  if (effect === 'photoFlash') hidePhotoSnapshot();
 }
 
 function setupPractice(lesson, turn, onSuccess, onFailure) {
@@ -641,11 +663,11 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
   const badBtn = el('#bad-btn');
   const shutter = el('#shutter-icon');
   el('#help-text').classList.add('hidden');
+  hidePhotoSnapshot();   // defensive: clear any leftover from the prior screen
 
   // Next button — shown when lesson.showNextButton is true.
   if (lesson.showNextButton) {
     nextBtn.classList.remove('hidden');
-    select('next');
   } else {
     nextBtn.classList.add('hidden');
   }
@@ -658,10 +680,25 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
     badBtn.classList.add('hidden');
   }
 
+  // Initial highlight. For `badToNext` migrations, the bad button starts
+  // highlighted; otherwise the next button gets the highlight if it's
+  // visible at all. Nothing is selected when no buttons are shown.
+  if (lesson.highlightTransition === 'badToNext') {
+    select('bad');
+  } else if (lesson.showNextButton) {
+    select('next');
+  } else {
+    select(null);
+  }
+
   // Shutter icon — shown when the lesson opts in.
   if (shutter) {
     shutter.classList.toggle('hidden', !lesson.showShutterIcon);
   }
+
+  // Initial zoom level. Zoom Out needs to start ALREADY zoomed in so
+  // there's something to zoom out from. Every other lesson resets to 1.0.
+  applyDisplayZoom(lesson.startZoomedIn ? DISPLAY_ZOOM_LEVEL : 1.0);
 
   const prefix = isRecorded ? CONTENT.practice2Prefix : CONTENT.practice1Prefix;
   // innerHTML so <strong> markers inside lesson.instruction get highlighted
@@ -684,8 +721,20 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
     clearTimeout(failureTimer);
     clearTimeout(helpTimer);
     if (isRecorded) markRecordingGesture();
+
+    // Visual reactions of the gesture — camera transform / flash / highlight
+    // migration. All on the display layer; the detector source is untouched.
     triggerCameraEffect(lesson.cameraEffect);
-    onSuccess();
+    if (lesson.highlightTransition === 'badToNext') select('next');
+
+    // Hold on the practice screen for EFFECT_HOLD_MS so the participant
+    // sees the effect, then clean up and transition. The recorder's own
+    // post-capture window is the same length, so for Practice 2 the
+    // clip stops at the same moment the success screen appears.
+    setTimeout(() => {
+      cleanupCameraEffect(lesson.cameraEffect);
+      onSuccess();
+    }, EFFECT_HOLD_MS);
   };
 
   activeGestureHandler = (g) => {

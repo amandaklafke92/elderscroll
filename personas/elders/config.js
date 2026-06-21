@@ -86,6 +86,13 @@ const CONFIG = {
      feed (#camera) is never scaled. Zoom Out resets to 1.0. */
   displayZoomLevel: 1.4,
 
+  /* How long the practice screen holds AFTER a successful gesture so the
+     user can see the visual effect (zoom, photo freeze-frame, highlight
+     migration), before transitioning to the success screen. Aligned with
+     the Practice-2 post-capture window so the recording stops at the same
+     moment the success screen appears. */
+  effectHoldMs: 3000,
+
   /* Final reel + Lovable handoff. The passcode remains in the local helper,
      never in browser-delivered code. */
   uploadEndpoint: 'http://localhost:8787/upload',
