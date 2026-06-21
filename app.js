@@ -23,7 +23,8 @@ const PUSH_FORWARD_Z   = CONFIG.pushForwardZ;
 const REACH_UP_MARGIN  = CONFIG.reachUpMargin;
 const OPEN_NEAR        = CONFIG.openOutNearRatio;
 const OPEN_FAR         = CONFIG.openOutFarRatio;
-const ROTATE_RATIO     = CONFIG.rotateRatio;
+const TPOSE_HEIGHT_TOL = CONFIG.tPoseHeightTol;
+const TPOSE_WIDTH_RATIO = CONFIG.tPoseWidthRatio;
 const GESTURE_COOLDOWN = CONFIG.gestureCooldown;
 const GESTURE_HOLD     = CONFIG.gestureHoldFrames ?? 1;
 const CROSS_TAP_HOLD   = CONFIG.crossTapHoldFrames ?? GESTURE_HOLD;
@@ -233,15 +234,20 @@ function detectPushForward(lm) {
   return holdGate(pushForwardState, wristsForward && wristsAtShoulderY);
 }
 
-/* --- Zoom In = BOTH arms extended overhead.
-   Two wrist conditions count as "up":
-     - the wrist's y is above the nose by REACH_UP_MARGIN, OR
-     - the wrist has gone off the top of the camera frame (y <= 0).
-   We also skip the strict visibility check on the wrists: MediaPipe
-   drops visibility when an arm is partly occluded or near the frame
-   edge, but the y coordinate is still usable. The nose still needs
-   to be visible (so we have a vertical reference). */
+/* --- Zoom In = sequential overhead reach: first ONE arm up, THEN the
+   other. Two arms going up simultaneously does NOT count — the gesture
+   is one-then-the-other.
+   A wrist counts as "up" if its y clears the nose by REACH_UP_MARGIN
+   OR if it has left the frame from the top (y <= 0). We keep the
+   permissive visibility handling so a partly-occluded wrist isn't
+   ignored.
+   State machine:
+     reachUpFirstSide = null  → no arming yet
+     reachUpFirstSide = 'L'/'R' → that wrist went up while the other was
+                                  still down; now waiting for the other
+     fire = the OTHER wrist later goes up (the first may still be up). */
 const reachUpState = { frames: 0, last: 0 };
+let reachUpFirstSide = null;
 let lastReachUpVals = { ly: 0, ry: 0, ny: 0 };
 function detectReachUp(lm) {
   const nose = lm[0], lw = lm[15], rw = lm[16];
@@ -249,7 +255,19 @@ function detectReachUp(lm) {
   lastReachUpVals = { ly: lw.y, ry: rw.y, ny: nose.y };
   const lwUp = lw.y < nose.y - REACH_UP_MARGIN || lw.y <= 0;
   const rwUp = rw.y < nose.y - REACH_UP_MARGIN || rw.y <= 0;
-  return holdGate(reachUpState, lwUp && rwUp);
+
+  if (reachUpFirstSide === null) {
+    if (lwUp && !rwUp) reachUpFirstSide = 'L';
+    else if (rwUp && !lwUp) reachUpFirstSide = 'R';
+    // both up simultaneously, or neither up — do nothing; wait for a real "one only".
+  }
+  const fire =
+    (reachUpFirstSide === 'L' && rwUp) ||
+    (reachUpFirstSide === 'R' && lwUp);
+
+  const triggered = holdGate(reachUpState, fire);
+  if (triggered) reachUpFirstSide = null;
+  return triggered;
 }
 
 /* --- Zoom Out = wrists transition from near each other at chest
@@ -273,20 +291,28 @@ function detectOpenOut(lm) {
   return triggered;
 }
 
-/* --- Take a Photo = torso rotation. Shoulder width foreshortens when
-   the user rotates around the vertical axis. We keep a rolling
-   "facing-forward" baseline (max-tracking) and trigger when the
-   current shoulder width falls below ROTATE_RATIO of it. */
-let baselineShoulderW = null;
-const rotateState = { frames: 0, last: 0 };
-function detectRotate(lm) {
-  const ls = lm[11], rs = lm[12];
-  if (!visible(ls) || !visible(rs)) return false;
-  const sw = dist(ls, rs) || 0.2;
-  if (baselineShoulderW === null) { baselineShoulderW = sw; return false; }
-  if (sw > baselineShoulderW) baselineShoulderW = baselineShoulderW * 0.85 + sw * 0.15;
-  const ratio = sw / baselineShoulderW;
-  return holdGate(rotateState, ratio < ROTATE_RATIO);
+/* --- Take a Photo = T-pose ("cristo"): both arms extended laterally at
+   shoulder height, body in a cross.
+     - wrists at roughly the same y as shoulders (within TPOSE_HEIGHT_TOL),
+     - wrist-to-wrist horizontal span at least TPOSE_WIDTH_RATIO × shoulder
+       width.  At rest both numbers are smaller; in a real T-pose the span
+       roughly doubles or triples and both wrists drop to shoulder y.
+   No motion / arming step needed — it's a pose hold, gated by the standard
+   hold-frames so a transient pass doesn't fire. */
+const tPoseState = { frames: 0, last: 0 };
+let lastTPoseVals = { heightL: 0, heightR: 0, widthRatio: 0 };
+function detectTPose(lm) {
+  const ls = lm[11], rs = lm[12], lw = lm[15], rw = lm[16];
+  if (!visible(ls) || !visible(rs) || !visible(lw) || !visible(rw)) return false;
+  const shoulderWidth = Math.abs(ls.x - rs.x) || 0.2;
+  const wristSpan = Math.abs(lw.x - rw.x);
+  const widthRatio = wristSpan / shoulderWidth;
+  const heightL = Math.abs(lw.y - ls.y);
+  const heightR = Math.abs(rw.y - rs.y);
+  lastTPoseVals = { heightL, heightR, widthRatio };
+  const armsAtShoulderY = heightL < TPOSE_HEIGHT_TOL && heightR < TPOSE_HEIGHT_TOL;
+  const armsOpen = widthRatio > TPOSE_WIDTH_RATIO;
+  return holdGate(tPoseState, armsAtShoulderY && armsOpen);
 }
 
 let lastFires = {};
@@ -297,8 +323,8 @@ function processGestures(lm) {
   const pushForward = detectPushForward(lm);
   const reachUp     = detectReachUp(lm);
   const openOut     = detectOpenOut(lm);
-  const rotate      = detectRotate(lm);
-  lastFires = { clap, lean, crossTap, pushForward, reachUp, openOut, rotate };
+  const tPose       = detectTPose(lm);
+  lastFires = { clap, lean, crossTap, pushForward, reachUp, openOut, tPose };
 
   if (activeGestureHandler) {
     if (clap)            activeGestureHandler('clap');
@@ -308,7 +334,7 @@ function processGestures(lm) {
     if (pushForward) activeGestureHandler('pushForward');
     if (reachUp)     activeGestureHandler('reachUp');
     if (openOut)     activeGestureHandler('openOut');
-    if (rotate)      activeGestureHandler('rotate');
+    if (tPose)       activeGestureHandler('tPose');
   }
   updateDebug(lm);
 }
@@ -1160,7 +1186,6 @@ function updateDebug(lm) {
   const sw = Math.abs(ls.x - rs.x) || 0.2;
   const wristRatio = dist(lm[15], lm[16]) / sw;
   const leanOffset = baselineX === null ? 0 : (cx - baselineX) / sw;
-  const rotateR = baselineShoulderW ? sw / baselineShoulderW : 1;
   const fires = Object.entries(lastFires)
     .filter(([_, v]) => v && v !== false)
     .map(([k, v]) => v === true ? k : `${k}=${v}`)
@@ -1171,8 +1196,9 @@ function updateDebug(lm) {
     `wrist/shoulder: ${wristRatio.toFixed(2)}\n` +
     `cross-tap dist: ${crossTapStr} (<${CROSS_TAP_DIST})\n` +
     `lean offset:    ${leanOffset.toFixed(2)} (>${LEAN_ENTER})\n` +
-    `rotate ratio:   ${rotateR.toFixed(2)} (<${ROTATE_RATIO})\n` +
     `last z (lw/rw): ${(lm[15].z ?? 0).toFixed(2)} / ${(lm[16].z ?? 0).toFixed(2)}\n` +
     `reach-up y (nose / lw / rw): ${lastReachUpVals.ny.toFixed(2)} / ${lastReachUpVals.ly.toFixed(2)} / ${lastReachUpVals.ry.toFixed(2)} (need < ${(lastReachUpVals.ny - REACH_UP_MARGIN).toFixed(2)})\n` +
+    `zoom-in first side: ${reachUpFirstSide ?? '-'}\n` +
+    `t-pose (height L/R, span ratio): ${lastTPoseVals.heightL.toFixed(2)} / ${lastTPoseVals.heightR.toFixed(2)}, ${lastTPoseVals.widthRatio.toFixed(2)} (need < ${TPOSE_HEIGHT_TOL}, > ${TPOSE_WIDTH_RATIO})\n` +
     `fires: ${fires || '-'}`;
 }

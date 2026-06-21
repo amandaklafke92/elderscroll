@@ -49,10 +49,15 @@ const CONFIG = {
   openOutNearRatio: 0.50,
   openOutFarRatio:  3.1,
 
-  /* Take a Photo = torso rotation. When current shoulder width falls
-     below this fraction of the rolling-baseline (facing-forward) width,
-     the user is considered rotated. Lower = needs a fuller turn. */
-  rotateRatio:     0.42,
+  /* Take a Photo = T-pose ("cristo"): both arms extended laterally at
+     shoulder height.
+     - tPoseHeightTol: max |wrist.y - shoulder.y| (image y units). Lower
+       = stricter requirement that the arms are truly horizontal.
+     - tPoseWidthRatio: min (wrist-to-wrist span / shoulder width). At
+       rest with arms down this is ~0.5; with arms fully out it climbs
+       to 2.5–3+. Higher = arms must be fully extended out. */
+  tPoseHeightTol:  0.10,
+  tPoseWidthRatio: 2.4,
 
   /* Number of consecutive frames a detector must see its "fire" condition
      before triggering. Higher = the user must hold the pose briefly,

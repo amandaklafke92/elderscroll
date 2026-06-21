@@ -57,8 +57,8 @@ const CONTENT = {
       name: 'Zoom In',
       video: 'Videos/zoom in.mp4',
       gestureKey: 'reachUp',
-      gestureLabel: 'Reach both arms up overhead',
-      instruction: 'Raise both arms straight up above your head.',
+      gestureLabel: 'Reach one arm up, then the other',
+      instruction: 'Raise one arm above your head, then raise the other.',
     },
     {
       id: 'zoom-out',
@@ -72,9 +72,9 @@ const CONTENT = {
       id: 'take-photo',
       name: 'Take a Photo',
       video: 'Videos/takeaphoto.mp4',
-      gestureKey: 'rotate',
-      gestureLabel: 'Turn your shoulders to one side',
-      instruction: 'Turn your shoulders to one side, as if pointing at something.',
+      gestureKey: 'tPose',
+      gestureLabel: 'Open both arms out to the sides (T-pose)',
+      instruction: 'Stretch both arms straight out to the sides, like a cross.',
     },
   ],
 
