@@ -111,7 +111,6 @@ html, body {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  min-height: 72px;
 }
 .upload-status { margin: 0; text-align: center; }
 

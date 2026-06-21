@@ -60,6 +60,7 @@ let currentSelection = 'next';
 let helpTimer = null;
 let failureTimer = null;
 let currentSkipAction = null;     // TESTING ONLY: presenter S key
+let currentCancelAction = null;   // cancels callbacks from an abandoned screen
 
 let lessonIdx = 0;
 let currentLesson = null;
@@ -314,6 +315,8 @@ function showScreen(name) {
 }
 
 function goState(state) {
+  if (currentCancelAction) currentCancelAction();
+  currentCancelAction = null;
   activeGestureHandler = null;
   activeExpectedGesture = null;
   currentSkipAction = null;
@@ -435,9 +438,15 @@ function playVideoOnce({ videoEl, placeholderEl, src, placeholderLabel }, onDone
     if (advanced) return;
     advanced = true;
     cleanup();
+    currentCancelAction = null;
     currentSkipAction = null;
     onDone();
   }
+  currentCancelAction = () => {
+    advanced = true;
+    cleanup();
+    videoEl.pause();
+  };
   currentSkipAction = () => {
     videoEl.pause();
     done();
@@ -499,6 +508,7 @@ function runCountdown(onDone) {
     if (finished) return;
     finished = true;
     clearInterval(tick);
+    currentCancelAction = null;
     currentSkipAction = null;
     onDone();
   };
@@ -510,6 +520,10 @@ function runCountdown(onDone) {
       countEl.textContent = remaining;
     }
   }, 1000);
+  currentCancelAction = () => {
+    finished = true;
+    clearInterval(tick);
+  };
   currentSkipAction = finish;
 }
 
@@ -580,10 +594,15 @@ function runFailure(onDone) {
     if (finished) return;
     finished = true;
     clearTimeout(timer);
+    currentCancelAction = null;
     currentSkipAction = null;
     onDone();
   };
   const timer = setTimeout(finish, FAILURE_SHOW_MS);
+  currentCancelAction = () => {
+    finished = true;
+    clearTimeout(timer);
+  };
   currentSkipAction = finish;
 }
 
@@ -617,9 +636,15 @@ function runConfetti(onDone) {
     finished = true;
     cancelAnimationFrame(confettiRAF);
     confettiCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    currentCancelAction = null;
     currentSkipAction = null;
     onDone();
   }
+  currentCancelAction = () => {
+    finished = true;
+    cancelAnimationFrame(confettiRAF);
+    confettiCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  };
   currentSkipAction = finish;
   function frame() {
     confettiCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
@@ -651,10 +676,15 @@ function runGiftScreen(onDone) {
     if (finished) return;
     finished = true;
     clearTimeout(timer);
+    currentCancelAction = null;
     currentSkipAction = null;
     onDone();
   };
   const timer = setTimeout(finish, GIFT_MS);
+  currentCancelAction = () => {
+    finished = true;
+    clearTimeout(timer);
+  };
   currentSkipAction = finish;
 }
 
@@ -955,6 +985,7 @@ function pickReelMime() {
 
 function playReel() {
   showScreen('reveal');
+  currentCancelAction = null;
   currentSkipAction = null;
   if (!recordedClips.length) {
     setUploadUi(CONTENT.reveal.noClips, '');
@@ -963,7 +994,7 @@ function playReel() {
   if (reelRecorder) return;
 
   recordedClips.sort((a, b) => a.order - b.order);
-  setUploadUi(CONTENT.reveal.rendering, '');
+  setUploadUi('', '');
 
   const source = el('#reel-source');
   const canvas = el('#reel-canvas');
@@ -1069,7 +1100,7 @@ function triggerDownload(blob, extension) {
 }
 
 async function uploadReel(blob, extension) {
-  setUploadUi(CONTENT.reveal.uploadPending, '');
+  setUploadUi('', '');
   try {
     const params = new URLSearchParams({
       name: participantName || 'Anonymous',
@@ -1087,7 +1118,7 @@ async function uploadReel(blob, extension) {
     const shareUrl = result.url ||
       (result.id ? `${VIDEO_LIBRARY_URL}/v/${result.id}` : '');
     if (!shareUrl) throw new Error('Upload succeeded without a video URL');
-    setUploadUi(CONTENT.reveal.uploadSuccess, shareUrl);
+    setUploadUi('', shareUrl);
   } catch (error) {
     console.warn('[ElderScroll] Lovable upload failed; local copy was kept', error);
     setUploadUi(CONTENT.reveal.uploadFailed, '');
@@ -1098,6 +1129,7 @@ function setUploadUi(message, shareUrl) {
   const status = el('#upload-status');
   const link = el('#download-link');
   status.textContent = message;
+  status.classList.toggle('hidden', !message);
   if (shareUrl) {
     link.href = shareUrl;
     link.textContent = CONTENT.reveal.downloadButton;
@@ -1130,6 +1162,8 @@ function setupPresenterKeys() {
       e.preventDefault();
       console.log('[TEST] Jumping to the final gift and reel');
       activeGestureHandler = null;
+      if (currentCancelAction) currentCancelAction();
+      currentCancelAction = null;
       currentSkipAction = null;
       clearTimeout(helpTimer);
       clearTimeout(failureTimer);

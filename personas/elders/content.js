@@ -96,9 +96,6 @@ const CONTENT = {
   giftText: "Here's a little gift for all your hard work!",
 
   reveal: {
-    rendering: 'Making your video…',
-    uploadPending: 'Saving your video…',
-    uploadSuccess: 'Your video is ready.',
     uploadFailed: 'Your video was saved on this computer, but could not reach the download library.',
     noClips: 'No Practice 2 clips were recorded.',
     downloadButton: 'Download your video',
