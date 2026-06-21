@@ -1243,6 +1243,9 @@ function reelFilename(extension) {
 }
 
 function finalizeReel(blob, extension) {
+  // Reel has finished playing; show a spinner while it finalises + uploads.
+  el('#render-loader-text').textContent = CONTENT.reveal.rendering;
+  el('#render-loader').classList.remove('hidden');
   triggerDownload(blob, extension);
   uploadReel(blob, extension);
 }
@@ -1287,6 +1290,8 @@ async function uploadReel(blob, extension) {
 function setUploadUi(message, shareUrl) {
   const status = el('#upload-status');
   const link = el('#download-link');
+  // Any terminal state (a message or a ready link) clears the render spinner.
+  if (message || shareUrl) el('#render-loader').classList.add('hidden');
   status.textContent = message;
   status.classList.toggle('hidden', !message);
   if (shareUrl) {

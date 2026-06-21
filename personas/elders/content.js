@@ -96,6 +96,7 @@ const CONTENT = {
   giftText: "Here's a little gift for all your hard work!",
 
   reveal: {
+    rendering: 'Saving to the Batcave…',
     uploadFailed: 'Your video was saved on this computer, but could not reach the download library.',
     noClips: 'No Practice 2 clips were recorded.',
     downloadButton: 'Download your video',
