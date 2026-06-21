@@ -48,8 +48,14 @@ modules require localhost.
 ## Presenter controls
 
 - `Space` — perform the gesture expected by the current practice screen.
+- `S` — testing only: skip the current video, countdown, practice, or feedback screen.
+- `R` — testing only: record a five-second clip.
+- `P` — testing only: render and preview all clips recorded so far.
 - `d` — toggle gesture-debug values.
 - `i` — invert the reveal segmentation mask if the foreground/background is reversed.
+
+Remove the `S`, `R`, and `P` testing controls and the visible test-recording status
+before the final public demo.
 
 ## Important files
 

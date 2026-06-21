@@ -59,6 +59,7 @@ let activeExpectedGesture = null;  // gestureKey expected on the current practic
 let currentSelection = 'next';
 let helpTimer = null;
 let failureTimer = null;
+let currentSkipAction = null;     // TESTING ONLY: presenter S key
 
 let lessonIdx = 0;
 let currentLesson = null;
@@ -71,7 +72,9 @@ const VIDEO_LIBRARY_URL = CONFIG.videoLibraryUrl;
    ===================================================================== */
 window.addEventListener('DOMContentLoaded', () => {
   camera = el('#camera');
-  el('#start-btn').addEventListener('click', start, { once: true });
+  const startButton = el('#start-btn');
+  startButton.addEventListener('click', start, { once: true });
+  currentSkipAction = () => startButton.click();
   setupPresenterKeys();
   sizeConfetti();
   window.addEventListener('resize', sizeConfetti);
@@ -313,6 +316,7 @@ function showScreen(name) {
 function goState(state) {
   activeGestureHandler = null;
   activeExpectedGesture = null;
+  currentSkipAction = null;
   clearTimeout(helpTimer);
   clearTimeout(failureTimer);
 
@@ -407,6 +411,7 @@ function setupName() {
     recordedClips = [];
     goState('intro');
   };
+  currentSkipAction = submit;
   button.onclick = submit;
   input.onkeydown = (event) => {
     if (event.key === 'Enter') {
@@ -435,7 +440,17 @@ function playVideoOnce({ videoEl, placeholderEl, src, placeholderLabel }, onDone
     videoEl.onended = videoEl.onerror = videoEl.oncanplay = null;
     clearTimeout(phTimer); clearTimeout(maxTimer);
   }
-  function done() { if (advanced) return; advanced = true; cleanup(); onDone(); }
+  function done() {
+    if (advanced) return;
+    advanced = true;
+    cleanup();
+    currentSkipAction = null;
+    onDone();
+  }
+  currentSkipAction = () => {
+    videoEl.pause();
+    done();
+  };
 
   videoEl.classList.remove('hidden');
   placeholderEl.classList.add('hidden');
@@ -494,15 +509,23 @@ function runCountdown(withRecording, onDone) {
 
   let remaining = Math.max(1, Math.round(GET_READY_MS / 1000));
   countEl.textContent = remaining;
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearInterval(tick);
+    currentSkipAction = null;
+    onDone();
+  };
   const tick = setInterval(() => {
     remaining -= 1;
     if (remaining <= 0) {
-      clearInterval(tick);
-      onDone();
+      finish();
     } else {
       countEl.textContent = remaining;
     }
   }, 1000);
+  currentSkipAction = finish;
 }
 
 /* =====================================================================
@@ -541,25 +564,35 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
 
   helpTimer = setTimeout(showHelp, HELP_DELAY_MS);
 
-  activeGestureHandler = (g) => {
-    if (g !== lesson.gestureKey) return;
+  const succeed = (skipPostCapture = false) => {
     activeGestureHandler = null;
+    currentSkipAction = null;
     clearTimeout(failureTimer);
     clearTimeout(helpTimer);
 
     if (isRecorded) {
-      // Let the recorder keep running for POST_CAPTURE_MS, then save the
-      // clip — in the background.  Confetti can roll in parallel so the
-      // user sees feedback immediately.
-      trackPendingRecording(new Promise((resolve) => {
-        setTimeout(async () => {
-          await endPractice2Recording(lesson);
-          resolve();
-        }, POST_CAPTURE_MS);
-      }));
+      const finishRecording = async () => {
+        await endPractice2Recording(lesson);
+      };
+      if (skipPostCapture) {
+        trackPendingRecording(finishRecording());
+      } else {
+        trackPendingRecording(new Promise((resolve) => {
+          setTimeout(async () => {
+            await finishRecording();
+            resolve();
+          }, POST_CAPTURE_MS);
+        }));
+      }
     }
     onSuccess();
   };
+
+  activeGestureHandler = (g) => {
+    if (g !== lesson.gestureKey) return;
+    succeed(false);
+  };
+  currentSkipAction = () => succeed(true);
 }
 
 function showHelp() {
@@ -573,7 +606,16 @@ function showHelp() {
    ===================================================================== */
 function runFailure(onDone) {
   el('#failure-text').textContent = CONTENT.failureText;
-  setTimeout(onDone, FAILURE_SHOW_MS);
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    currentSkipAction = null;
+    onDone();
+  };
+  const timer = setTimeout(finish, FAILURE_SHOW_MS);
+  currentSkipAction = finish;
 }
 
 /* =====================================================================
@@ -600,6 +642,16 @@ function runConfetti(onDone) {
   }));
 
   const stop = performance.now() + CONFETTI_MS;
+  let finished = false;
+  function finish() {
+    if (finished) return;
+    finished = true;
+    cancelAnimationFrame(confettiRAF);
+    confettiCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    currentSkipAction = null;
+    onDone();
+  }
+  currentSkipAction = finish;
   function frame() {
     confettiCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
     for (const p of confettiParticles) {
@@ -614,9 +666,7 @@ function runConfetti(onDone) {
     if (performance.now() < stop) {
       confettiRAF = requestAnimationFrame(frame);
     } else {
-      cancelAnimationFrame(confettiRAF);
-      confettiCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-      onDone();
+      finish();
     }
   }
   frame();
@@ -689,11 +739,16 @@ async function waitForPendingRecordings() {
 }
 
 function beginPractice2Recording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    console.warn('[ElderScroll] recording already in progress');
+    return false;
+  }
   recordingChunks = [];
   const stream = camera && camera.srcObject;
   if (!stream || typeof MediaRecorder === 'undefined') {
     mediaRecorder = null;
-    return;
+    console.warn('[ElderScroll] recording unavailable: camera stream or MediaRecorder missing');
+    return false;
   }
   const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
   const mime = candidates.find(t => MediaRecorder.isTypeSupported(t));
@@ -703,10 +758,13 @@ function beginPractice2Recording() {
       if (e.data && e.data.size > 0) recordingChunks.push(e.data);
     };
     mediaRecorder.start();
+    console.log('[ElderScroll] recording started');
+    return true;
   } catch (err) {
     console.error('[ElderScroll] MediaRecorder failed to start', err);
     mediaRecorder = null;
     recordingChunks = [];
+    return false;
   }
 }
 
@@ -726,10 +784,14 @@ function endPractice2Recording(lesson) {
         recordedClips.push({
           lessonId: lesson.id,
           lessonName: lesson.name,
-          order: CONTENT.lessons.findIndex(item => item.id === lesson.id),
+          order: lesson.order ?? CONTENT.lessons.findIndex(item => item.id === lesson.id),
           blob,
           url: URL.createObjectURL(blob),
         });
+        console.log(
+          `[ElderScroll] recording saved: ${lesson.lessonName || lesson.name} · ` +
+          `${Math.round(blob.size / 1024)} KB · ${recordedClips.length} clip(s)`
+        );
       }
       await saveClip({
         blob,
@@ -761,6 +823,56 @@ function abortPractice2Recording() {
     recordingChunks = [];
     mediaRecorder = null;
   }
+}
+
+/* TESTING ONLY — remove R/P/S controls and #test-recording-status before demo. */
+function setTestRecordingStatus(message, active = false) {
+  const status = el('#test-recording-status');
+  status.textContent = message;
+  status.classList.toggle('active', active);
+  status.classList.toggle('hidden', !message);
+}
+
+function recordTestClip() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    console.warn('[TEST] Recording already in progress; press P after it finishes.');
+    setTestRecordingStatus('RECORDING ALREADY RUNNING', true);
+    return;
+  }
+
+  const testLesson = currentLesson || {
+    id: `test-${Date.now()}`,
+    name: 'Test clip',
+    gestureLabel: 'Presenter test recording',
+    order: recordedClips.length,
+  };
+  if (!beginPractice2Recording()) {
+    setTestRecordingStatus('TEST RECORDING COULD NOT START');
+    return;
+  }
+
+  console.log('[TEST] Recording five-second clip…');
+  setTestRecordingStatus('● TEST RECORDING — 5 SECONDS', true);
+  const pending = new Promise((resolve) => {
+    setTimeout(async () => {
+      await endPractice2Recording(testLesson);
+      console.log('[TEST] Clip saved. Press P to preview the stitched reel.');
+      setTestRecordingStatus('TEST CLIP SAVED — PRESS P');
+      resolve();
+    }, 5000);
+  });
+  trackPendingRecording(pending);
+}
+
+async function previewRecordedClips() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    console.log('[TEST] Waiting for the current recording to finish…');
+    setTestRecordingStatus('WAITING FOR RECORDING TO FINISH…', true);
+  }
+  await waitForPendingRecordings();
+  console.log(`[TEST] Rendering ${recordedClips.length} recorded clip(s)…`);
+  setTestRecordingStatus('');
+  playReel();
 }
 
 /* =====================================================================
@@ -828,6 +940,7 @@ function pickReelMime() {
 
 function playReel() {
   showScreen('reveal');
+  currentSkipAction = null;
   if (!recordedClips.length) {
     setUploadUi(CONTENT.reveal.noClips, '');
     return;
@@ -985,6 +1098,20 @@ function setUploadUi(message, shareUrl) {
    ===================================================================== */
 function setupPresenterKeys() {
   document.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    if (key === 's') {
+      e.preventDefault();
+      if (currentSkipAction) {
+        console.log('[TEST] Skipping current step');
+        const skip = currentSkipAction;
+        currentSkipAction = null;
+        skip();
+      } else {
+        console.log('[TEST] Nothing to skip on this screen');
+      }
+      return;
+    }
+
     const target = e.target;
     if (target && (
       target.tagName === 'INPUT' ||
@@ -1004,9 +1131,13 @@ function setupPresenterKeys() {
       if (activeGestureHandler) activeGestureHandler('leanRight');
     } else if (e.key === 'ArrowLeft') {
       if (activeGestureHandler) activeGestureHandler('leanLeft');
-    } else if (e.key === 'd') {
+    } else if (key === 'r') {
+      recordTestClip();
+    } else if (key === 'p') {
+      previewRecordedClips();
+    } else if (key === 'd') {
       el('#debug').classList.toggle('hidden');
-    } else if (e.key === 'i') {
+    } else if (key === 'i') {
       segInvert = !segInvert;
       console.log('[ElderScroll] segmentation inverted:', segInvert);
     }
