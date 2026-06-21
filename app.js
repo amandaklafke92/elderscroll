@@ -963,9 +963,6 @@ function beginPractice2Recording(mode = 'auto') {
     mediaRecorder.start();
     recordingStartedAt = performance.now();
     console.log('[ElderScroll] recording started');
-    if (mode === 'auto') {
-      setTestRecordingStatus('● AUTO RECORDING — PRACTICE 2', true);
-    }
     return true;
   } catch (err) {
     console.error('[ElderScroll] MediaRecorder failed to start', err);
@@ -999,7 +996,6 @@ function endPractice2Recording(lesson) {
       const blob = new Blob(recordingChunks, { type: mime });
       recordingChunks = [];
       mediaRecorder = null;
-      const completedMode = recordingMode;
       const gestureOffset = recordingGestureOffset;
       recordingMode = null;
       recordingStartedAt = null;
@@ -1017,11 +1013,6 @@ function endPractice2Recording(lesson) {
           `[ElderScroll] recording saved: ${lesson.lessonName || lesson.name} · ` +
           `${Math.round(blob.size / 1024)} KB · ${recordedClips.length} clip(s)`
         );
-        if (completedMode === 'auto') {
-          setTestRecordingStatus(
-            `AUTO CLIP SAVED — ${recordedClips.length} CLIP(S)`
-          );
-        }
       }
       await saveClip({
         blob,
@@ -1070,56 +1061,6 @@ function abortPractice2Recording() {
     recordingStartedAt = null;
     recordingGestureOffset = null;
   }
-}
-
-/* TESTING ONLY — remove R/P/S controls and #test-recording-status before demo. */
-function setTestRecordingStatus(message, active = false) {
-  const status = el('#test-recording-status');
-  status.textContent = message;
-  status.classList.toggle('active', active);
-  status.classList.toggle('hidden', !message);
-}
-
-function recordTestClip() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    console.warn('[TEST] Recording already in progress; press P after it finishes.');
-    setTestRecordingStatus('RECORDING ALREADY RUNNING', true);
-    return;
-  }
-
-  const testLesson = {
-    id: `test-${Date.now()}`,
-    name: 'Test clip',
-    gestureLabel: 'Presenter test recording',
-    order: CONTENT.lessons.length + recordedClips.length,
-  };
-  if (!beginPractice2Recording('manual')) {
-    setTestRecordingStatus('TEST RECORDING COULD NOT START');
-    return;
-  }
-
-  console.log('[TEST] Recording five-second clip…');
-  setTestRecordingStatus('● TEST RECORDING — 5 SECONDS', true);
-  const pending = new Promise((resolve) => {
-    setTimeout(async () => {
-      await endPractice2Recording(testLesson);
-      console.log('[TEST] Clip saved. Press P to preview the stitched reel.');
-      setTestRecordingStatus('TEST CLIP SAVED — PRESS P');
-      resolve();
-    }, 5000);
-  });
-  trackPendingRecording(pending);
-}
-
-async function previewRecordedClips() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    console.log('[TEST] Waiting for the current recording to finish…');
-    setTestRecordingStatus('WAITING FOR RECORDING TO FINISH…', true);
-  }
-  await waitForPendingRecordings();
-  console.log(`[TEST] Rendering ${recordedClips.length} recorded clip(s)…`);
-  setTestRecordingStatus('');
-  playReel();
 }
 
 /* =====================================================================
@@ -1421,6 +1362,9 @@ function reelFilename(extension) {
 }
 
 function finalizeReel(blob, extension) {
+  // Reel has finished playing; show a spinner while it finalises + uploads.
+  el('#render-loader-text').textContent = CONTENT.reveal.rendering;
+  el('#render-loader').classList.remove('hidden');
   triggerDownload(blob, extension);
   uploadReel(blob, extension);
 }
@@ -1465,6 +1409,8 @@ async function uploadReel(blob, extension) {
 function setUploadUi(message, shareUrl) {
   const status = el('#upload-status');
   const link = el('#download-link');
+  // Any terminal state (a message or a ready link) clears the render spinner.
+  if (message || shareUrl) el('#render-loader').classList.add('hidden');
   status.textContent = message;
   status.classList.toggle('hidden', !message);
   if (shareUrl) {
@@ -1483,6 +1429,15 @@ function setUploadUi(message, shareUrl) {
 function setupPresenterKeys() {
   document.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
+    // Ignore presenter/test keys while typing in a text field (e.g. the name
+    // screen) — otherwise 's', 'f', space etc. fire the shortcut instead of
+    // being typed into the input.
+    const target = e.target;
+    if (target && (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    )) return;
     if (key === 's') {
       e.preventDefault();
       if (currentSkipAction) {
@@ -1521,13 +1476,6 @@ function setupPresenterKeys() {
       return;
     }
 
-    const target = e.target;
-    if (target && (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.isContentEditable
-    )) return;
-
     if (e.key === ' ') {
       e.preventDefault();
       // Space fires whatever gesture the current practice expects.
@@ -1540,10 +1488,6 @@ function setupPresenterKeys() {
       if (activeGestureHandler) activeGestureHandler('leanRight');
     } else if (e.key === 'ArrowLeft') {
       if (activeGestureHandler) activeGestureHandler('leanLeft');
-    } else if (key === 'r') {
-      recordTestClip();
-    } else if (key === 'p') {
-      previewRecordedClips();
     } else if (key === 'd') {
       el('#debug').classList.toggle('hidden');
     } else if (key === 'i') {

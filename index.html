@@ -42,7 +42,6 @@
   <!-- Tiny debug readout for tuning. Hidden until you press the "d" key. -->
   <div id="debug" class="hidden"></div>
   <!-- TESTING ONLY: visible status for presenter-key recordings. -->
-  <div id="test-recording-status" class="hidden"></div>
 
   <!-- ===================== SCREENS ===================== -->
 
@@ -162,6 +161,15 @@
       <canvas id="reel-canvas"></canvas>
     </div>
     <div class="reveal-actions">
+      <!-- Shown after the reel finishes playing while it finalises + uploads.
+           The bat flies left→right into the cave, then loops. -->
+      <div id="render-loader" class="render-loader hidden">
+        <div class="bat-flight">
+          <div class="bat-cave"></div>
+          <div class="bat-spinner">🦇</div>
+        </div>
+        <p id="render-loader-text" class="render-loader-text"></p>
+      </div>
       <p id="upload-status" class="upload-status hidden"></p>
       <a id="download-link" class="download-link hidden" target="_blank" rel="noopener"></a>
     </div>
