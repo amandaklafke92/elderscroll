@@ -29,18 +29,10 @@ const CONFIG = {
      camera angle and how tightly the fingers reach the shoulder. */
   crossTapDist:    0.7,
 
-  /* Move = bilateral push forward. Two-stage detector:
-       (1) ARM  — both wrists pulled back near the body. Triggers when
-                  wrist.z is ABOVE pushBackZ (less negative).
-       (2) FIRE — both wrists thrust forward. Triggers when wrist.z
-                  is BELOW pushForwardZ (more negative).
-     `pushBackZ` is intentionally a bit negative because resting wrists
-     usually hang slightly in front of the hip plane. Raise it (toward 0
-     or positive) for a stricter arming; lower it (more negative) if the
-     gesture is hard to arm. `pushForwardZ` controls how far you have
-     to reach — more negative = fuller extension required. */
-  pushBackZ:       -0.15,
-  pushForwardZ:    -0.35,
+  /* Move = bilateral push forward. Both wrists' z (depth) must drop
+     below this (more negative = closer to camera) AND sit near
+     shoulder height.  More negative = arms must be pushed further out. */
+  pushForwardZ:    -0.40,
 
   /* Zoom In = one arm straight up. A wrist must rise above the nose by
      at least this much (normalized image y units). Larger = the hand

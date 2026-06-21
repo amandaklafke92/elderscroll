@@ -20,7 +20,6 @@ const LEAN_RIGHT_SIGN  = CONFIG.leanRightSign;
 
 const CROSS_TAP_DIST   = CONFIG.crossTapDist;
 const PUSH_FORWARD_Z   = CONFIG.pushForwardZ;
-const PUSH_BACK_Z      = CONFIG.pushBackZ ?? 0;
 const REACH_UP_MARGIN  = CONFIG.reachUpMargin;
 const OPEN_NEAR        = CONFIG.openOutNearRatio;
 const OPEN_FAR         = CONFIG.openOutFarRatio;
@@ -220,30 +219,18 @@ function detectCrossTap(lm) {
   return holdGate(crossTapState, best < CROSS_TAP_DIST, CROSS_TAP_HOLD);
 }
 
-/* --- Move = bilateral push forward.
-   Two-stage detector so it can't fire mid-motion:
-     1. ARM  — both wrists pulled back near the body (z above PUSH_BACK_Z)
-               at roughly shoulder height. Mirrors the arming pattern in
-               detectOpenOut.
-     2. FIRE — both wrists thrust forward (z below PUSH_FORWARD_Z), still
-               near shoulder height. Hold + cooldown gate applies as usual.
-   This stops the gesture triggering on a partial push or on arms that
-   happen to be hanging slightly forward at rest. */
-let pushArmed = false;
+/* --- Move = bilateral push forward. Uses MediaPipe pose z (negative =
+   closer to camera) for both wrists, plus a sanity check that the
+   arms are at roughly shoulder height. */
 const pushForwardState = { frames: 0, last: 0 };
 function detectPushForward(lm) {
   const ls = lm[11], rs = lm[12], lw = lm[15], rw = lm[16];
   if (!visible(ls) || !visible(rs) || !visible(lw) || !visible(rw)) return false;
   if (typeof lw.z !== 'number' || typeof rw.z !== 'number') return false;
-  const wristsAtChestOrShoulder =
-    Math.abs(lw.y - ls.y) < 0.40 && Math.abs(rw.y - rs.y) < 0.40;
-  const wristsBack    = lw.z > PUSH_BACK_Z    && rw.z > PUSH_BACK_Z;
   const wristsForward = lw.z < PUSH_FORWARD_Z && rw.z < PUSH_FORWARD_Z;
-  if (wristsBack && wristsAtChestOrShoulder) pushArmed = true;
-  const fire = pushArmed && wristsForward && wristsAtChestOrShoulder;
-  const triggered = holdGate(pushForwardState, fire);
-  if (triggered) pushArmed = false;
-  return triggered;
+  const wristsAtShoulderY =
+    Math.abs(lw.y - ls.y) < 0.22 && Math.abs(rw.y - rs.y) < 0.22;
+  return holdGate(pushForwardState, wristsForward && wristsAtShoulderY);
 }
 
 /* --- Zoom In = one arm extended overhead. Wrist above nose by margin. */
@@ -1178,6 +1165,5 @@ function updateDebug(lm) {
     `lean offset:    ${leanOffset.toFixed(2)} (>${LEAN_ENTER})\n` +
     `rotate ratio:   ${rotateR.toFixed(2)} (<${ROTATE_RATIO})\n` +
     `last z (lw/rw): ${(lm[15].z ?? 0).toFixed(2)} / ${(lm[16].z ?? 0).toFixed(2)}\n` +
-    `push: ${pushArmed ? 'ARMED' : 'idle'} (back > ${PUSH_BACK_Z}, fwd < ${PUSH_FORWARD_Z})\n` +
     `fires: ${fires || '-'}`;
 }
