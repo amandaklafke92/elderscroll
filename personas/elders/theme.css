@@ -292,6 +292,15 @@ body {
   box-shadow: 8px 8px 0 var(--black);
 }
 
+/* ---------- Shutter icon (Take a Photo) ---------- */
+.shutter-icon {
+  background: var(--panel);
+  border: 6px solid var(--yellow);
+  border-radius: 50%;
+  box-shadow: 6px 6px 0 var(--ink);
+  color: var(--yellow);
+}
+
 /* ---------- Failure cue ---------- */
 #screen-failure {
   /* Visual signal cue: red border around the entire failure screen so the

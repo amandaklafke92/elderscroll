@@ -26,14 +26,28 @@ const CONTENT = {
   },
 
   /* Lesson manifest.
-     - `id`            stable identifier (used in stored clip metadata)
-     - `name`          human label shown on the tutorial screen + in stored metadata
-     - `video`         tutorial clip in /Videos (filenames are the source of truth)
-     - `gestureKey`    must match a detector the engine exposes
-                       (crossTap | pushForward | reachUp | openOut | rotate)
-     - `gestureLabel`  short label stored with the recorded clip
-     - `instruction`   short, clear line shown above the camera in practice
-     - `showNextButton` optional; only the "Click" lesson uses the on-screen button */
+     Required fields:
+       - id              stable identifier (used in stored clip metadata)
+       - name            human label shown on the tutorial screen + metadata
+       - video           tutorial clip in /Videos (filenames are the truth)
+       - gestureKey      detector the engine exposes (crossTap | pushForward
+                         | reachUp | openOut | tPose)
+       - gestureLabel    short label stored with the recorded clip
+       - instruction     short, clear line shown above the camera in practice
+                         (HTML allowed; wrap key words in <strong>)
+
+     Optional UI hints (default to off — Click is the simplest baseline):
+       - showNextButton  show the on-screen "next" button during practice
+       - badButtonText   show a second decoy button to the LEFT of "next"
+                         with the supplied label (purely cosmetic)
+       - showShutterIcon show the camera/shutter icon on the practice screen
+       - cameraEffect    fires on a successful gesture:
+                           'zoomIn'      → zoom the display layer in
+                           'zoomOut'     → reset the display layer to 1.0x
+                           'photoFlash'  → iPhone-style white flash + capture
+                         All effects apply ONLY to the display layer
+                         (#camera-display) so MediaPipe's detection feed
+                         (#camera) is never scaled. */
   lessons: [
     {
       id: 'click',
@@ -51,6 +65,8 @@ const CONTENT = {
       gestureKey: 'pushForward',
       gestureLabel: 'Push both arms forward',
       instruction: 'Push <strong>both arms forward</strong>, like a gentle swipe.',
+      showNextButton: true,
+      badButtonText: 'If you stay on this button, your bank account PIN will be posted to Facebook.',
     },
     {
       id: 'zoom-in',
@@ -59,6 +75,7 @@ const CONTENT = {
       gestureKey: 'reachUp',
       gestureLabel: 'Reach one arm up, then the other',
       instruction: 'Raise <strong>one arm</strong> above your head, then raise <strong>the other</strong>.',
+      cameraEffect: 'zoomIn',
     },
     {
       id: 'zoom-out',
@@ -67,6 +84,7 @@ const CONTENT = {
       gestureKey: 'openOut',
       gestureLabel: 'Open both arms out wide',
       instruction: 'Start with your hands at your chest, then <strong>open both arms out wide</strong>.',
+      cameraEffect: 'zoomOut',
     },
     {
       id: 'take-photo',
@@ -75,6 +93,8 @@ const CONTENT = {
       gestureKey: 'tPose',
       gestureLabel: 'Open both arms out to the sides (T-pose)',
       instruction: 'Stretch <strong>both arms straight out to the sides</strong>, like a cross.',
+      showShutterIcon: true,
+      cameraEffect: 'photoFlash',
     },
   ],
 

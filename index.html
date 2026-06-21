@@ -14,8 +14,22 @@
 </head>
 <body>
 
-  <!-- Always-on webcam feed: sits behind everything, mirrored like a mirror. -->
+  <!--
+    Webcam pipeline — two <video> elements, ONE MediaStream:
+      #camera         = detection source. MediaPipe samples from this
+                        element. NEVER apply any transform / scale /
+                        crop here, or the wrist-tape coordinate space
+                        shifts and tracking breaks. Hidden visually.
+      #camera-display = what the user sees. Mirrored and zoomable via
+                        CSS `transform: scaleX(-1) scale(--display-zoom)`.
+                        Zoom changes never touch the detector.
+  -->
   <video id="camera" autoplay muted playsinline></video>
+  <video id="camera-display" autoplay muted playsinline></video>
+
+  <!-- iPhone-style white flash overlay. Engine toggles .flashing on the
+       Take a Photo gesture; sits above the screens for full-screen impact. -->
+  <div id="flash-overlay" aria-hidden="true"></div>
 
   <!-- Confetti is drawn on this canvas during the success screen. -->
   <canvas id="confetti"></canvas>
@@ -94,14 +108,21 @@
     <p id="practice-instruction" class="instruction"></p>
 
     <div class="button-layer">
-      <!-- Legacy bad button: structurally retained but kept hidden in the new flow. -->
-      <button id="bad-btn" type="button" class="practice-btn bad-btn hidden">
-        Wire my pension to a handsome prince.
-      </button>
-      <!-- Next button: shown only on the Click lesson (lesson.showNextButton). -->
+      <!-- Bad button: shown only when the active lesson supplies
+           `badButtonText`. Its label is rewritten by setupPractice. -->
+      <button id="bad-btn" type="button" class="practice-btn bad-btn hidden"></button>
+      <!-- Next button: shown only when the active lesson sets
+           `showNextButton: true`. -->
       <button id="next-btn" type="button" class="practice-btn next-btn hidden">
         next
       </button>
+    </div>
+
+    <!-- Shutter icon: shown only when the active lesson sets
+         `showShutterIcon: true` (Take a Photo). The gesture itself fires
+         the flash via #flash-overlay; this is the visual cue for the user. -->
+    <div id="shutter-icon" class="shutter-icon hidden" aria-hidden="true">
+      <span class="shutter-icon-glyph">📷</span>
     </div>
 
     <p id="help-text" class="help-text hidden"></p>

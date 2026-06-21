@@ -70,6 +70,8 @@ const UPLOAD_ENDPOINT = CONFIG.uploadEndpoint;
 const VIDEO_LIBRARY_URL = CONFIG.videoLibraryUrl;
 const REEL_SEQUENCE = CONFIG.reelSequence || [];
 const REEL_MUSIC_URL = CONFIG.reelMusic || '';
+const DISPLAY_ZOOM_LEVEL = CONFIG.displayZoomLevel ?? 1.4;
+let displayZoom = 1.0;
 
 /* =====================================================================
    1. STARTUP — camera + MediaPipe, triggered by the Start button
@@ -94,6 +96,16 @@ async function start() {
     });
     camera.srcObject = stream;
     await camera.play();
+
+    // Mirror the same MediaStream into the user-facing display layer.
+    // #camera-display is what the participant sees; #camera is the
+    // detection source and is never transformed.
+    const cameraDisplay = el('#camera-display');
+    if (cameraDisplay) {
+      cameraDisplay.srcObject = stream;
+      cameraDisplay.play().catch(() => {});
+    }
+    applyDisplayZoom(1.0);   // baseline zoom every session
 
     status.textContent = 'Loading movement detection… (first time can take ~10 seconds)';
     const vision = await import(MP_BUNDLE);
@@ -581,17 +593,74 @@ function select(which) {
   el('#bad-btn').classList.toggle('selected', which === 'bad');
 }
 
+/* Camera-effect helpers. Applied to the user-visible display layer
+   only — #camera (the detector source) is never touched.
+     applyDisplayZoom — sets the --display-zoom CSS variable on
+                        #camera-display; transition is handled in base.css.
+     triggerPhotoFlash — toggles .flashing on #flash-overlay; the keyframe
+                        does the iPhone-style fade-in/fade-out.
+     capturePhotoFrame — optional drawImage() snapshot of the display
+                        layer. Kept lightweight (logged only) — Amanda's
+                        reel pipeline owns the actual recorded clips. */
+function applyDisplayZoom(level) {
+  displayZoom = level;
+  const cd = el('#camera-display');
+  if (cd) cd.style.setProperty('--display-zoom', String(level));
+}
+function triggerPhotoFlash() {
+  const flash = el('#flash-overlay');
+  if (!flash) return;
+  flash.classList.remove('flashing');
+  // force a reflow so re-adding the class restarts the animation
+  void flash.offsetWidth;
+  flash.classList.add('flashing');
+}
+function capturePhotoFrame() {
+  const cd = el('#camera-display');
+  if (!cd || cd.readyState < 2) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = cd.videoWidth || 1280;
+  canvas.height = cd.videoHeight || 720;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.drawImage(cd, 0, 0, canvas.width, canvas.height);
+  console.log('[ElderScroll] photo captured:', canvas.width + 'x' + canvas.height);
+}
+function triggerCameraEffect(effect) {
+  if (!effect) return;
+  switch (effect) {
+    case 'zoomIn':     applyDisplayZoom(DISPLAY_ZOOM_LEVEL); break;
+    case 'zoomOut':    applyDisplayZoom(1.0); break;
+    case 'photoFlash': capturePhotoFrame(); triggerPhotoFlash(); break;
+  }
+}
+
 function setupPractice(lesson, turn, onSuccess, onFailure) {
   const isRecorded = turn === 2;
   const nextBtn = el('#next-btn');
-  el('#bad-btn').classList.add('hidden');
+  const badBtn = el('#bad-btn');
+  const shutter = el('#shutter-icon');
   el('#help-text').classList.add('hidden');
 
+  // Next button — shown when lesson.showNextButton is true.
   if (lesson.showNextButton) {
     nextBtn.classList.remove('hidden');
     select('next');
   } else {
     nextBtn.classList.add('hidden');
+  }
+
+  // Bad button — shown when the lesson supplies badButtonText.
+  if (lesson.badButtonText) {
+    badBtn.textContent = lesson.badButtonText;
+    badBtn.classList.remove('hidden');
+  } else {
+    badBtn.classList.add('hidden');
+  }
+
+  // Shutter icon — shown when the lesson opts in.
+  if (shutter) {
+    shutter.classList.toggle('hidden', !lesson.showShutterIcon);
   }
 
   const prefix = isRecorded ? CONTENT.practice2Prefix : CONTENT.practice1Prefix;
@@ -615,6 +684,7 @@ function setupPractice(lesson, turn, onSuccess, onFailure) {
     clearTimeout(failureTimer);
     clearTimeout(helpTimer);
     if (isRecorded) markRecordingGesture();
+    triggerCameraEffect(lesson.cameraEffect);
     onSuccess();
   };
 

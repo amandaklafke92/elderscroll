@@ -81,6 +81,11 @@ const CONFIG = {
   getReadyMs: 3000,
   giftMs:     3500,
 
+  /* Camera-display zoom level set by the Zoom In gesture. Applied as a
+     CSS `transform: scale()` on #camera-display only — the detection
+     feed (#camera) is never scaled. Zoom Out resets to 1.0. */
+  displayZoomLevel: 1.4,
+
   /* Final reel + Lovable handoff. The passcode remains in the local helper,
      never in browser-delivered code. */
   uploadEndpoint: 'http://localhost:8787/upload',

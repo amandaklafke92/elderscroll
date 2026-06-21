@@ -24,17 +24,57 @@ html, body {
 /* The engine toggles this class to show/hide screens and elements. */
 .hidden { display: none !important; }
 
-/* ---------- Fullscreen mirrored webcam, behind everything ---------- */
-/* The mirror is for the user only; it does NOT affect pose detection. */
+/* ---------- Dual-feed webcam pipeline ----------
+   #camera is the DETECTION source for MediaPipe — it stays the size of
+   the viewport (so the element actually plays and produces frames) but is
+   visually hidden behind #camera-display. Crucially: NO transform is
+   applied here. Detector coordinates are 1:1 with the raw stream.
+
+   #camera-display is the user-visible layer. It mirrors the feed
+   (scaleX(-1)) and accepts a runtime zoom via the --display-zoom CSS
+   variable (set by applyDisplayZoom() in app.js).
+   The mirror is cosmetic; the detector never sees a transformed frame. */
 #camera {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scaleX(-1);
   z-index: 0;
   background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+#camera-display {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1) scale(var(--display-zoom, 1));
+  transform-origin: center center;
+  transition: transform 0.35s ease;
+  z-index: 1;
+  background: #000;
+  pointer-events: none;
+}
+
+/* iPhone-style flash overlay. JS toggles `.flashing` on the gesture. */
+#flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 40;            /* above .screen (z 10), below #debug (z 50) */
+}
+#flash-overlay.flashing {
+  animation: flash-anim 0.6s ease-out;
+}
+@keyframes flash-anim {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 #confetti {
@@ -129,6 +169,22 @@ html, body {
 .practice-btn { position: absolute; top: 64%; transform: translateY(-50%); }
 .next-btn { left: 50%; margin-left: 24px; min-width: 200px; }
 .bad-btn  { right: 50%; margin-right: 24px; max-width: 38vw; }
+
+/* ---------- Shutter icon (Take a Photo) ---------- */
+.shutter-icon {
+  position: fixed;
+  top: 64%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.shutter-icon-glyph { font-size: 3.4rem; line-height: 1; }
 
 /* ---------- Help text ---------- */
 .help-text { position: fixed; bottom: 5vh; z-index: 3; max-width: 80vw; }
