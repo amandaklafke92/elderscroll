@@ -24,6 +24,7 @@
 # Local scratch notes (not part of the product)
 backlog.md
 substack-draft_elderscroll.md
+substack/
 
 # Local Claude Code state
 .claude/
